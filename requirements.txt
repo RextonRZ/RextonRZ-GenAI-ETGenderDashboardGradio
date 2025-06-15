@@ -1,0 +1,9 @@
+pandas
+plotly
+matplotlib
+seaborn
+ipywidgets
+voila
+openpyxl
+imbalanced-learn
+scikit-learn
