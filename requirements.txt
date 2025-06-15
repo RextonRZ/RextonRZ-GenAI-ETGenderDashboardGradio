@@ -1,9 +1,6 @@
 pandas
 plotly
-matplotlib
-seaborn
-ipywidgets
-voila
+panel==1.4.1
 openpyxl
 imbalanced-learn
 scikit-learn
