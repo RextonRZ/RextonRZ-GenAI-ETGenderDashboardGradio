@@ -1,7 +1,7 @@
 ---
 title: GenAI Eye-Tracking Dashboard
-sdk: docker
-app_port: 7860
+sdk: streamlit
+app_file: app.py
 ---
 
 An interactive dashboard for visualizing and analyzing eye-tracking study data.
