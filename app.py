@@ -176,6 +176,3 @@ template.main.append(
 
 # --- 7. Make the App Serveable ---
 template.servable()
-
-# --- 7. Make the App Serveable ---
-dashboard.servable(title="Eye-Tracking Dashboard")
