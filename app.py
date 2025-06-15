@@ -146,31 +146,36 @@ def get_comparison_dashboard(question, metric):
     dash, heat = create_comparison_dashboard(df, metric, selected_metric_sheets, f"({question})")
     return pn.Column(dash, sizing_mode='stretch_width') # Heatmap can be added if needed
 
-# --- 6. Define the Dashboard Layout ---
-header_html = """
-<div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 10px; color: white; text-align: center;'>
-    <h1>🧠 Eye-Tracking Analytics Dashboard</h1>
-    <p>Advanced Visual Analytics & Data Exploration Platform</p>
-</div>
-"""
-header = pn.pane.HTML(header_html, sizing_mode='stretch_width')
+# --- 6. Define the Dashboard Layout (USING A TEMPLATE) ---
 
-controls = pn.Row(question_select, metric_select, styles={'justify-content': 'center'})
-
-dashboard = pn.Column(
-    header,
-    controls,
-    pn.layout.Divider(),
-    pn.pane.Markdown("## Interactive Bar Chart Analysis"),
-    get_bar_chart,
-    pn.layout.Divider(),
-    pn.pane.Markdown("## Correlation Scatter Analysis"),
-    get_scatter_plot,
-    pn.layout.Divider(),
-    pn.pane.Markdown("## Multi-Dimensional Analysis"),
-    get_comparison_dashboard,
-    sizing_mode='stretch_width'
+# Create a Material template with a dark theme and a title
+template = pn.template.MaterialTemplate(
+    title='Eye-Tracking Analytics Dashboard',
+    theme='dark'
 )
+
+# Add the main controls to the sidebar of the template
+template.sidebar.append(pn.pane.Markdown("## 🎛️ Controls"))
+template.sidebar.append(question_select)
+template.sidebar.append(metric_select)
+
+# Add the plots to the main area of the template
+# We use pn.panel() to make sure the functions are turned into displayable objects
+template.main.append(
+    pn.Column(
+        pn.pane.Markdown("## Interactive Bar Chart Analysis", styles={'color': MODERN_COLORS['primary']}),
+        pn.panel(get_bar_chart, loading_indicator=True), # Add a loading indicator for better UX
+        pn.layout.Divider(),
+        pn.pane.Markdown("## Correlation Scatter Analysis", styles={'color': MODERN_COLORS['primary']}),
+        pn.panel(get_scatter_plot, loading_indicator=True),
+        pn.layout.Divider(),
+        pn.pane.Markdown("## Multi-Dimensional Analysis", styles={'color': MODERN_COLORS['primary']}),
+        pn.panel(get_comparison_dashboard, loading_indicator=True)
+    )
+)
+
+# --- 7. Make the App Serveable ---
+template.servable()
 
 # --- 7. Make the App Serveable ---
 dashboard.servable(title="Eye-Tracking Dashboard")
