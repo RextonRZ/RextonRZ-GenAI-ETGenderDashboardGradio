@@ -1,4 +1,3 @@
-
 # ==============================================================================
 # FIXED PANEL DASHBOARD SCRIPT (app.py) - CORRECTED FOR HUGGING FACE DEPLOYMENT
 # ==============================================================================
@@ -521,9 +520,5 @@ def create_dashboard():
 # --- 9. Create and Serve the App ---
 dashboard = create_dashboard()
 
-# Make the dashboard serveable
+# Make the dashboard serveable for deployment
 dashboard.servable()
-
-# For development/testing
-if __name__ == "__main__":
-    dashboard.show(port=5007)
