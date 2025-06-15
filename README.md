@@ -1,7 +1,12 @@
 ---
-title: GenAI Eye-Tracking Dashboard
+title: Eye Tracking Dashboard
+emoji: 👁️
+colorFrom: blue
+colorTo: purple
 sdk: streamlit
 app_file: app.py
+pinned: false
 ---
 
-An interactive dashboard for visualizing and analyzing eye-tracking study data.
+# Eye-Tracking Analytics Dashboard
+Interactive dashboard for analyzing eye-tracking data.
