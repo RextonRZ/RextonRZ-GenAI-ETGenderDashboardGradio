@@ -16,7 +16,7 @@ from functools import reduce
 from imblearn.over_sampling import SMOTE
 
 warnings.filterwarnings('ignore')
-pn.extension('plotly', sizing_mode="stretch_width", design="dark", template="material")
+pn.extension('plotly', sizing_mode="stretch_width", theme="dark", template="material")
 
 # --- 2. Styling and Global Configuration ---
 MODERN_COLORS = {
