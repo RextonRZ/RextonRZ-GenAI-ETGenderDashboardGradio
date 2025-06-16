@@ -262,7 +262,7 @@ def _create_4_panel_dashboard(data, selected_metric, plot_title_suffix):
 
     # Final Layout
     fig.update_layout(
-        height=850, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+        height=850, plot_bgcolor='#000', paper_bgcolor='#000',
         font_color='white', title_text=f'"{selected_metric}" - Analysis Dashboard {plot_title_suffix}',
         title_x=0.5, title_font_size=20,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
@@ -403,15 +403,15 @@ def create_gradio_interface():
                 label="📊 Select Metric"
             )
         
-        with gr.Accordion("📈 Multi-Dimensional Analysis & Heatmaps", open=True):
-            dashboard_plot = gr.Plot(label="Multi-Dimensional Dashboard")
-            heatmap_plot = gr.Plot(label="Correlation Heatmap")
-            
-        with gr.Accordion("📊 Interactive Bar Chart Analysis", open=False):
+        with gr.Accordion("📊 Interactive Bar Chart Analysis", open=True):
             bar_plot = gr.Plot(label="Bar Chart")
-            
+        
         with gr.Accordion("🔍 Correlation Scatter Analysis", open=False):
             scatter_plot = gr.Plot(label="Scatter Plot")
+        
+        with gr.Accordion("📈 Multi-Dimensional Analysis & Heatmaps", open=False):
+            dashboard_plot = gr.Plot(label="Multi-Dimensional Dashboard")
+            heatmap_plot = gr.Plot(label="Correlation Heatmap")
             
         # Wire up components
         inputs = [question_select, metric_select]
