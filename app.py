@@ -362,7 +362,7 @@ def create_gradio_interface():
     """Create the Gradio interface with improved layout and styling."""
     question_options = ['All Combined'] + sorted(list(all_merged_long_dfs.keys()))
     
-    with gr.Blocks(theme=gr.themes.Default(primary_hue="blue", secondary_hue="purple").dark(), title="Eye-Tracking Analytics Dashboard") as demo:
+    with gr.Blocks(theme=gr.themes.Default(primary_hue="blue", secondary_hue="purple"), dark=True, title="Eye-Tracking Analytics Dashboard") as demo:
         # Header with custom HTML and CSS
         gr.HTML(f"""
         <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; text-align: center;'>
