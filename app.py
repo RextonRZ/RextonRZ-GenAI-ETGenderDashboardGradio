@@ -340,32 +340,48 @@ all_merged_long_dfs, final_combined_long_df, selected_metric_sheets = load_and_p
 # --- Main Dashboard Function ---
 def update_dashboard(question, metric):
     """Update all charts based on user selection and return a tuple of plots."""
-    df_to_plot = final_combined_long_df if question == 'All Combined' else all_merged_long_dfs.get(question, pd.DataFrame())
-    
-    agg_func = 'mean' if 'Time to first Fixation' in metric else 'sum'
-    plot_title_suffix = f"({question})"
-    
-    # Create plots
-    if question != 'All Combined':
-        bar_chart = create_modern_bar_plot(df_to_plot, metric, agg_func, plot_title_suffix)
-    else:
-        bar_chart = create_combined_bar_plot(df_to_plot, metric, agg_func, plot_title_suffix)
+    try:
+        df_to_plot = final_combined_long_df if question == 'All Combined' else all_merged_long_dfs.get(question, pd.DataFrame())
         
-    scatter_chart = create_modern_scatter_plot(df_to_plot, 'Tot Fixation dur', 'Fixation count', plot_title_suffix)
-    dashboard_chart = _create_4_panel_dashboard(df_to_plot, metric, plot_title_suffix)
-    heatmap_chart = _create_correlation_heatmap(df_to_plot, selected_metric_sheets, plot_title_suffix)
-    
-    return dashboard_chart, heatmap_chart, bar_chart, scatter_chart
+        if df_to_plot.empty:
+            # Return empty plots if no data
+            empty_fig = go.Figure().add_annotation(text="No data available", showarrow=False)
+            return empty_fig, empty_fig, empty_fig, empty_fig
+        
+        agg_func = 'mean' if 'Time to first Fixation' in metric else 'sum'
+        plot_title_suffix = f"({question})"
+        
+        # Create plots
+        if question != 'All Combined':
+            bar_chart = create_modern_bar_plot(df_to_plot, metric, agg_func, plot_title_suffix)
+        else:
+            bar_chart = create_combined_bar_plot(df_to_plot, metric, agg_func, plot_title_suffix)
+            
+        scatter_chart = create_modern_scatter_plot(df_to_plot, 'Tot Fixation dur', 'Fixation count', plot_title_suffix)
+        dashboard_chart = _create_4_panel_dashboard(df_to_plot, metric, plot_title_suffix)
+        heatmap_chart = _create_correlation_heatmap(df_to_plot, selected_metric_sheets, plot_title_suffix)
+        
+        return dashboard_chart, heatmap_chart, bar_chart, scatter_chart
+    except Exception as e:
+        print(f"Error in update_dashboard: {e}")
+        empty_fig = go.Figure().add_annotation(text=f"Error: {str(e)}", showarrow=False)
+        return empty_fig, empty_fig, empty_fig, empty_fig
 
 # --- Create Gradio Interface ---
 def create_gradio_interface():
     """Create the Gradio interface with improved layout and styling."""
     question_options = ['All Combined'] + sorted(list(all_merged_long_dfs.keys()))
     
-    with gr.Blocks(theme=gr.themes.Default(primary_hue="blue", secondary_hue="purple"), dark=True, title="Eye-Tracking Analytics Dashboard") as demo:
+    # Create custom theme
+    theme = gr.themes.Default(
+        primary_hue="blue",
+        secondary_hue="purple"
+    )
+    
+    with gr.Blocks(theme=theme, title="Eye-Tracking Analytics Dashboard") as demo:
         # Header with custom HTML and CSS
-        gr.HTML(f"""
-        <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; text-align: center;'>
+        gr.HTML("""
+        <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; text-align: center; margin-bottom: 20px;'>
             <h1 style='color: white; font-size: 2.5em; margin: 0; font-weight: 700; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);'>
                 🧠 Eye-Tracking Analytics Dashboard
             </h1>
@@ -377,10 +393,14 @@ def create_gradio_interface():
         
         with gr.Row():
             question_select = gr.Dropdown(
-                choices=question_options, value=question_options[0], label="📋 Select Question Set"
+                choices=question_options, 
+                value=question_options[0] if question_options else "All Combined", 
+                label="📋 Select Question Set"
             )
             metric_select = gr.Dropdown(
-                choices=selected_metric_sheets, value=selected_metric_sheets[0], label="📊 Select Metric"
+                choices=selected_metric_sheets, 
+                value=selected_metric_sheets[0] if selected_metric_sheets else "Tot Fixation dur", 
+                label="📊 Select Metric"
             )
         
         with gr.Accordion("📈 Multi-Dimensional Analysis & Heatmaps", open=True):
@@ -397,9 +417,11 @@ def create_gradio_interface():
         inputs = [question_select, metric_select]
         outputs = [dashboard_plot, heatmap_plot, bar_plot, scatter_plot]
         
+        # Event handlers
         question_select.change(fn=update_dashboard, inputs=inputs, outputs=outputs)
         metric_select.change(fn=update_dashboard, inputs=inputs, outputs=outputs)
         
+        # Load initial data
         demo.load(fn=update_dashboard, inputs=inputs, outputs=outputs)
         
     return demo
@@ -407,4 +429,4 @@ def create_gradio_interface():
 # --- Run the App ---
 if __name__ == "__main__":
     app = create_gradio_interface()
-    app.launch(debug=True)
+    app.launch(debug=True, share=False)
