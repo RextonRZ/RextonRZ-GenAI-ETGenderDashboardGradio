@@ -568,6 +568,46 @@ def get_custom_css():
             font-size: 1.5rem !important;
         }
     }
+
+    /* Fixed tab button styling */
+    .tab-btn {
+        background: transparent !important;
+        border: none !important;
+        border-radius: 0 !important;
+        color: #aab !important;
+        font-weight: 500 !important;
+        padding: 15px 20px !important;
+        margin: 0 !important;
+        transition: all 0.2s ease !important;
+        flex: 1;
+        text-align: center !important;
+    }
+    
+    .tab-btn.selected {
+        color: white !important;
+        background: rgba(67, 97, 238, 0.3) !important;
+        border-bottom: 3px solid #4361EE !important;
+    }
+    
+    .tab-btn:hover:not(.selected) {
+        background: rgba(255,255,255,0.05) !important;
+        color: white !important;
+    }
+    
+    /* Fix for dropdown hint text */
+    .gr-dropdown .gr-dropdown-label {
+        color: #667085 !important;
+    }
+    
+    /* Make dropdown text visible */
+    .gr-dropdown-selected {
+        color: #111 !important;
+    }
+    
+    /* Dropdown container styling */
+    .gr-dropdown {
+        background: white !important;
+    }
     """
 
 # --- Create Assets ---
@@ -669,10 +709,10 @@ def create_gradio_interface():
             active_tab = gr.State("overview_tab")
             
             with gr.Row(elem_classes="tab-nav") as tab_nav:
-                overview_btn = gr.Button(f"{icons['chart']} Overview", elem_classes="tab-btn selected")
-                scatter_btn = gr.Button(f"{icons['scatter']} Scatter Analysis", elem_classes="tab-btn")
-                dashboard_btn = gr.Button(f"{icons['dashboard']} Multi-Dimensional Analysis", elem_classes="tab-btn")
-                correlation_btn = gr.Button(f"{icons['heatmap']} Correlation Heatmaps", elem_classes="tab-btn")
+                overview_btn = gr.Button("Overview", elem_classes="tab-btn selected")
+                scatter_btn = gr.Button("Scatter Analysis", elem_classes="tab-btn")
+                dashboard_btn = gr.Button("Multi-Dimensional Analysis", elem_classes="tab-btn")
+                correlation_btn = gr.Button("Correlation Heatmaps", elem_classes="tab-btn")
             
             # Tab content area
             with gr.Column(elem_classes="plot-container"):
@@ -688,51 +728,39 @@ def create_gradio_interface():
             return classes["overview_tab"], classes["scatter_tab"], classes["dashboard_tab"], classes["correlation_tab"]
 
         overview_btn.click(
-            fn=lambda: update_tab("overview_tab"),
+            fn=lambda: "overview_tab",
             outputs=active_tab
         ).then(
             fn=update_dashboard,
-            inputs=[question_select, metric_select, active_tab],
+            inputs=[question_select, metric_select, gr.Textbox(value="overview_tab")],
             outputs=plot_output
-        ).then(
-            fn=lambda: ("tab-btn selected", "tab-btn", "tab-btn", "tab-btn"),
-            outputs=[overview_btn, scatter_btn, dashboard_btn, correlation_btn]
         )
         
         scatter_btn.click(
-            fn=lambda: update_tab("scatter_tab"),
+            fn=lambda: "scatter_tab",
             outputs=active_tab
         ).then(
             fn=update_dashboard,
-            inputs=[question_select, metric_select, active_tab],
+            inputs=[question_select, metric_select, gr.Textbox(value="scatter_tab")],
             outputs=plot_output
-        ).then(
-            fn=lambda: ("tab-btn", "tab-btn selected", "tab-btn", "tab-btn"),
-            outputs=[overview_btn, scatter_btn, dashboard_btn, correlation_btn]
         )
         
         dashboard_btn.click(
-            fn=lambda: update_tab("dashboard_tab"),
+            fn=lambda: "dashboard_tab",
             outputs=active_tab
         ).then(
-            fn=update_dashboard,
-            inputs=[question_select, metric_select, active_tab],
+            fn=update_dashboard, 
+            inputs=[question_select, metric_select, gr.Textbox(value="dashboard_tab")],
             outputs=plot_output
-        ).then(
-            fn=lambda: ("tab-btn", "tab-btn", "tab-btn selected", "tab-btn"),
-            outputs=[overview_btn, scatter_btn, dashboard_btn, correlation_btn]
         )
         
         correlation_btn.click(
-            fn=lambda: update_tab("correlation_tab"),
+            fn=lambda: "correlation_tab",
             outputs=active_tab
         ).then(
             fn=update_dashboard,
-            inputs=[question_select, metric_select, active_tab],
+            inputs=[question_select, metric_select, gr.Textbox(value="correlation_tab")],
             outputs=plot_output
-        ).then(
-            fn=lambda: ("tab-btn", "tab-btn", "tab-btn", "tab-btn selected"),
-            outputs=[overview_btn, scatter_btn, dashboard_btn, correlation_btn]
         )
         
         # Update handlers for dropdown changes
