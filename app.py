@@ -1,86 +1,3 @@
-import gradio as gr
-import pandas as pd
-import numpy as np
-import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
-import warnings
-import os
-from functools import reduce
-from imblearn.over_sampling import SMOTE
-import re
-import traceback
-
-# This is the new section added above the original code.
-# ==============================================================================
-# DEMOGRAPHICS AND UI ENHANCEMENTS
-# ==============================================================================
-
-def create_demographics_charts(initial_df, final_df):
-    """Creates a side-by-side pie chart figure for demographic comparison."""
-    # Prepare initial data
-    if initial_df is None or initial_df.empty:
-        initial_counts = pd.Series(dtype='int64', name='Gender')
-    else:
-        initial_counts = initial_df['Gender'].value_counts()
-
-    # Prepare final data (after SMOTE)
-    if final_df is None or final_df.empty:
-        final_counts = pd.Series(dtype='int64', name='Gender')
-    else:
-        # Crucial: get unique participants before counting to reflect the balanced set
-        unique_participants_final = final_df.drop_duplicates(subset=['Participant_ID'])
-        final_counts = unique_participants_final['Gender'].value_counts()
-
-    fig = make_subplots(
-        rows=1, cols=2,
-        specs=[[{'type':'pie'}, {'type':'pie'}]],
-        subplot_titles=('Initial Participants', 'Participants After SMOTE Balancing')
-    )
-
-    # Pie Chart 1: Initial Demographics
-    fig.add_trace(go.Pie(
-        labels=initial_counts.index,
-        values=initial_counts.values,
-        name="Initial",
-        marker_colors=[gender_palette.get(g, '#cccccc') for g in initial_counts.index],
-        hole=.4,
-        hoverinfo='label+percent+value',
-        textinfo='value+label',
-        textfont_size=14
-    ), row=1, col=1)
-
-    # Pie Chart 2: After SMOTE Balancing
-    fig.add_trace(go.Pie(
-        labels=final_counts.index,
-        values=final_counts.values,
-        name="After SMOTE",
-        marker_colors=[gender_palette.get(g, '#cccccc') for g in final_counts.index],
-        hole=.4,
-        hoverinfo='label+percent+value',
-        textinfo='value+label',
-        textfont_size=14
-    ), row=1, col=2)
-
-    # Update layout for a modern, clean look
-    fig.update_layout(
-        height=400,
-        plot_bgcolor='#000',
-        paper_bgcolor='#000',
-        font_color='white',
-        showlegend=False,
-        title_text="<b>Participant Gender Distribution: Before and After Balancing</b>",
-        title_x=0.5,
-        title_font_size=20,
-        margin=dict(l=20, r=20, t=80, b=20),
-        annotations=[
-            dict(font=dict(size=16, color=MODERN_COLORS['text'])),
-            dict(font=dict(size=16, color=MODERN_COLORS['text']))
-        ] # Style subplot titles
-    )
-    return fig
-
-
 # ==============================================================================
 # GRADIO DASHBOARD FOR HUGGING FACE DEPLOYMENT
 # ==============================================================================
@@ -249,7 +166,7 @@ def load_and_process_data():
         ], ignore_index=True)
 
         print(f"--- Data processing finished. Loaded {len(all_merged_long_dfs)} question sets ---")
-        return participant_df_global, all_merged_long_dfs, final_combined_long_df, selected_metric_sheets
+        return all_merged_long_dfs, final_combined_long_df, selected_metric_sheets
 
     except Exception as e:
         print(f"ERROR during data processing: {e}\n{traceback.format_exc()}")
@@ -258,16 +175,6 @@ def load_and_process_data():
 
 def create_sample_data():
     """Creates sample dataframes if the main data loading fails."""
-    # Create sample INITIAL participant list (imbalanced)
-    initial_participants_list = []
-    for p in range(30):
-        initial_participants_list.append({
-            'Participant_ID': f'Orig_P{p}',
-            'Gender': 'Male' if p < 20 else 'Female'  # 20 males, 10 females
-        })
-    sample_initial_df = pd.DataFrame(initial_participants_list)
-
-    # Create sample FINAL (balanced) data for the rest of the dashboard
     questions = ['Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Q6']
     all_merged_long_dfs = {}
     all_q_dfs = []
@@ -275,13 +182,13 @@ def create_sample_data():
     
     for q in questions:
         data = []
-        for p in range(50): # This will be the balanced data set (25 of each)
-            gender = 'Male' if p < 25 else 'Female'
+        for p in range(50):
+            gender = 'Male' if p % 2 == 0 else 'Female'
             for aoi_type in ['Real', 'AI']:
                 for aoi_num in range(5):
                     aoi_name = f"{q} AOI {aoi_num} {'A' if aoi_type == 'Real' else 'B'}"
                     data.append({
-                        'Participant_ID': f'Sample_{q}_P{p}', 'Gender': gender, 'AOI': aoi_name, 'Image_Type': aoi_type,
+                        'Participant_ID': f'Sample_P{p}', 'Gender': gender, 'AOI': aoi_name, 'Image_Type': aoi_type,
                         'Tot Fixation dur': np.random.gamma(2, 0.7 if gender == 'Female' else 0.8),
                         'Fixation count': np.random.gamma(2.5, 1.1 if gender == 'Female' else 1.0),
                         'Time to first Fixation': np.random.gamma(1.5, 0.5),
@@ -292,7 +199,7 @@ def create_sample_data():
         all_q_dfs.append(df.assign(Question=q))
     
     final_combined_long_df = pd.concat(all_q_dfs, ignore_index=True)
-    return sample_initial_df, all_merged_long_dfs, final_combined_long_df, selected_metric_sheets
+    return all_merged_long_dfs, final_combined_long_df, selected_metric_sheets
 
 
 # --- Plotting Functions (Replicated from Notebook) ---
@@ -428,7 +335,7 @@ def create_modern_scatter_plot(data, dur_col, count_col, plot_title_suffix):
 
 # --- Load Data on Startup ---
 print("Loading and processing data. This may take a moment...")
-initial_participants_df, all_merged_long_dfs, final_combined_long_df, selected_metric_sheets = load_and_process_data()
+all_merged_long_dfs, final_combined_long_df, selected_metric_sheets = load_and_process_data()
 
 # --- Main Dashboard Function ---
 def update_dashboard(question, metric):
@@ -469,23 +376,12 @@ def create_gradio_interface():
     theme = gr.themes.Default(
         primary_hue="blue",
         secondary_hue="purple"
-    ).set(
-        body_background_fill="#000000",
-        block_background_fill="#16213E",
-        block_label_background_fill="#1A1A2E",
-        block_title_text_color="#FFFFFF",
-        block_label_text_color="#FFFFFF",
-        input_background_fill="#1A1A2E",
-        button_secondary_background_fill="#FF6B6B"
     )
-    
-    # Generate the static demographics plot once
-    demographics_fig = create_demographics_charts(initial_participants_df, final_combined_long_df)
     
     with gr.Blocks(theme=theme, title="Eye-Tracking Analytics Dashboard") as demo:
         # Header with custom HTML and CSS
         gr.HTML("""
-        <div style='background: linear-gradient(135deg, #1A1A2E 0%, #16213E 100%); border: 1px solid #00D4FF; padding: 30px; border-radius: 15px; text-align: center; margin-bottom: 20px;'>
+        <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; text-align: center; margin-bottom: 20px;'>
             <h1 style='color: white; font-size: 2.0em; margin: 0; font-weight: 700; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);'>
                 🧠 Eye-Tracking Analytics Dashboard
             </h1>
@@ -495,20 +391,6 @@ def create_gradio_interface():
         </div>
         """)
         
-        # New Demographics and Explanation Section
-        with gr.Accordion("ℹ️ About the Data: Demographics & Balancing", open=True):
-            gr.Markdown("""
-            ### Understanding the Dataset & The Balancing Act
-            This dashboard explores eye-tracking data from an experiment comparing human-made images to AI-generated ones. The initial dataset contained an unequal number of male and female participants. To prevent this imbalance from skewing the analysis, a technique called **SMOTE (Synthetic Minority Over-sampling Technique)** was used.
-
-            SMOTE creates new, synthetic data points for the minority gender based on the characteristics of existing ones. The pie charts below visualize this process:
-            - **Left Chart:** Shows the original, imbalanced gender distribution from the experiment.
-            - **Right Chart:** Shows the perfectly balanced distribution used for all analyses in this dashboard.
-
-            This balancing act ensures that any observed differences in visual attention are more likely to be genuine and not just a result of having more data from one group than the other.
-            """)
-            gr.Plot(value=demographics_fig, label="Gender Distribution")
-
         with gr.Row():
             question_select = gr.Dropdown(
                 choices=question_options, 
