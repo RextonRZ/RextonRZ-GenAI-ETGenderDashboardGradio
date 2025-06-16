@@ -286,22 +286,19 @@ def _create_4_panel_dashboard(data, selected_metric, plot_title_suffix):
     fig.update_yaxes(title_text="Frequency", row=2, col=1)
     return fig
 
-
 def _create_correlation_heatmap(data, numeric_metrics, plot_title_suffix):
-    """Creates the correlation heatmap figure with mobile-friendly single column layout."""
+    """Creates the correlation heatmap figure."""
     genders_present = sorted([g for g in data['Gender'].unique() if pd.notna(g)])
     if not genders_present or len(numeric_metrics) < 2:
         return go.Figure().add_annotation(text="Not enough data for heatmap", showarrow=False)
 
-    # CHANGE: Use single column layout for mobile
     fig = make_subplots(
-        rows=len(genders_present), cols=1,  # Changed from cols=len(genders_present) to single column
-        subplot_titles=[f"Metric Correlation ({gender})" for gender in genders_present],
-        vertical_spacing=0.15
+        rows=1, cols=len(genders_present),
+        subplot_titles=[f"Metric Correlation ({gender})" for gender in genders_present]
     )
 
     for i, gender in enumerate(genders_present):
-        row = i + 1  # Changed from col to row
+        col = i + 1
         subset_corr = data[data['Gender'] == gender][numeric_metrics]
         if not subset_corr.empty:
             corr_matrix = subset_corr.corr()
@@ -310,11 +307,10 @@ def _create_correlation_heatmap(data, numeric_metrics, plot_title_suffix):
                 colorscale='RdBu_r', zmin=-1, zmax=1, text=corr_matrix.values,
                 texttemplate="%{text:.2f}", textfont={"size":9},
                 hovertemplate='Metric 1: %{y}<br>Metric 2: %{x}<br>Correlation: %{z:.2f}<extra></extra>'
-            ), row=row, col=1)  # Changed from row=1, col=col
+            ), row=1, col=col)
     
-    # CHANGE: Adjust height for stacked layout
     fig.update_layout(
-        height=400 * len(genders_present),  # Dynamic height based on number of genders
+        height=500, 
         plot_bgcolor=MODERN_COLORS['dark'], 
         paper_bgcolor=MODERN_COLORS['dark'],
         font_color='white', 
@@ -324,7 +320,6 @@ def _create_correlation_heatmap(data, numeric_metrics, plot_title_suffix):
         margin=dict(l=20, r=20, t=80, b=30),
     )
     return fig
-
 
 def create_modern_bar_plot(data, metric, agg_func, plot_title_suffix):
     """Creates bar plot, using notebook's logic."""
@@ -573,46 +568,6 @@ def get_custom_css():
             font-size: 1.5rem !important;
         }
     }
-
-    /* Fixed tab button styling */
-    .tab-btn {
-        background: transparent !important;
-        border: none !important;
-        border-radius: 0 !important;
-        color: #aab !important;
-        font-weight: 500 !important;
-        padding: 15px 20px !important;
-        margin: 0 !important;
-        transition: all 0.2s ease !important;
-        flex: 1;
-        text-align: center !important;
-    }
-    
-    .tab-btn.selected {
-        color: white !important;
-        background: rgba(67, 97, 238, 0.3) !important;
-        border-bottom: 3px solid #4361EE !important;
-    }
-    
-    .tab-btn:hover:not(.selected) {
-        background: rgba(255,255,255,0.05) !important;
-        color: white !important;
-    }
-    
-    /* Fix for dropdown hint text */
-    .gr-dropdown .gr-dropdown-label {
-        color: #667085 !important;
-    }
-    
-    /* Make dropdown text visible */
-    .gr-dropdown-selected {
-        color: #111 !important;
-    }
-    
-    /* Dropdown container styling */
-    .gr-dropdown {
-        background: white !important;
-    }
     """
 
 # --- Create Assets ---
@@ -699,7 +654,6 @@ def create_gradio_interface():
                     choices=question_options, 
                     value=question_options[0] if question_options else "All Combined", 
                     label="Select Question Set",
-                    info="Choose a specific question or view all combined data",  # ADDED
                     container=False
                 )
             with gr.Column(scale=2):
@@ -707,19 +661,18 @@ def create_gradio_interface():
                     choices=selected_metric_sheets, 
                     value=selected_metric_sheets[0] if selected_metric_sheets else "Tot Fixation dur", 
                     label="Select Metric",
-                    info="Choose the eye-tracking metric to analyze",  # ADDED
                     container=False
                 )
         
-        # CHANGE: Fix tab functionality with proper state management
+        # Modern tab-based interface instead of accordions
         with gr.Column(elem_classes="tabs"):
             active_tab = gr.State("overview_tab")
             
             with gr.Row(elem_classes="tab-nav") as tab_nav:
-                overview_btn = gr.Button("Overview", elem_id="overview_btn", elem_classes="tab-btn selected")
-                scatter_btn = gr.Button("Scatter Analysis", elem_id="scatter_btn", elem_classes="tab-btn")
-                dashboard_btn = gr.Button("Multi-Dimensional Analysis", elem_id="dashboard_btn", elem_classes="tab-btn")
-                correlation_btn = gr.Button("Correlation Heatmaps", elem_id="correlation_btn", elem_classes="tab-btn")
+                overview_btn = gr.Button(f"{icons['chart']} Overview", elem_classes="tab-btn selected")
+                scatter_btn = gr.Button(f"{icons['scatter']} Scatter Analysis", elem_classes="tab-btn")
+                dashboard_btn = gr.Button(f"{icons['dashboard']} Multi-Dimensional Analysis", elem_classes="tab-btn")
+                correlation_btn = gr.Button(f"{icons['heatmap']} Correlation Heatmaps", elem_classes="tab-btn")
             
             # Tab content area
             with gr.Column(elem_classes="plot-container"):
@@ -729,57 +682,69 @@ def create_gradio_interface():
         def update_tab(tab_name):
             return tab_name
 
-        
+        def update_btn_classes(active):
+            classes = {btn: "tab-btn" for btn in ["overview_tab", "scatter_tab", "dashboard_tab", "correlation_tab"]}
+            classes[active] = "tab-btn selected"
+            return classes["overview_tab"], classes["scatter_tab"], classes["dashboard_tab"], classes["correlation_tab"]
 
-        def switch_tab_and_update(tab_name, question, metric):
-            """Switch tab and update visualization"""
-            plot = update_dashboard(question, metric, tab_name)
-            
-            # Return updated button classes
-            btn_classes = {
-                "overview_btn": "tab-btn" + (" selected" if tab_name == "overview_tab" else ""),
-                "scatter_btn": "tab-btn" + (" selected" if tab_name == "scatter_tab" else ""),
-                "dashboard_btn": "tab-btn" + (" selected" if tab_name == "dashboard_tab" else ""),
-                "correlation_btn": "tab-btn" + (" selected" if tab_name == "correlation_tab" else "")
-            }
-            
-            return plot, tab_name, btn_classes["overview_btn"], btn_classes["scatter_btn"], btn_classes["dashboard_btn"], btn_classes["correlation_btn"]
-
-        # Event handlers for tabs
         overview_btn.click(
-            fn=lambda q, m: switch_tab_and_update("overview_tab", q, m),
-            inputs=[question_select, metric_select],
-            outputs=[plot_output, active_tab, overview_btn, scatter_btn, dashboard_btn, correlation_btn]
+            fn=lambda: update_tab("overview_tab"),
+            outputs=active_tab
+        ).then(
+            fn=update_dashboard,
+            inputs=[question_select, metric_select, active_tab],
+            outputs=plot_output
+        ).then(
+            fn=lambda: ("tab-btn selected", "tab-btn", "tab-btn", "tab-btn"),
+            outputs=[overview_btn, scatter_btn, dashboard_btn, correlation_btn]
         )
         
         scatter_btn.click(
-            fn=lambda q, m: switch_tab_and_update("scatter_tab", q, m),
-            inputs=[question_select, metric_select],
-            outputs=[plot_output, active_tab, overview_btn, scatter_btn, dashboard_btn, correlation_btn]
+            fn=lambda: update_tab("scatter_tab"),
+            outputs=active_tab
+        ).then(
+            fn=update_dashboard,
+            inputs=[question_select, metric_select, active_tab],
+            outputs=plot_output
+        ).then(
+            fn=lambda: ("tab-btn", "tab-btn selected", "tab-btn", "tab-btn"),
+            outputs=[overview_btn, scatter_btn, dashboard_btn, correlation_btn]
         )
         
         dashboard_btn.click(
-            fn=lambda q, m: switch_tab_and_update("dashboard_tab", q, m),
-            inputs=[question_select, metric_select],
-            outputs=[plot_output, active_tab, overview_btn, scatter_btn, dashboard_btn, correlation_btn]
+            fn=lambda: update_tab("dashboard_tab"),
+            outputs=active_tab
+        ).then(
+            fn=update_dashboard,
+            inputs=[question_select, metric_select, active_tab],
+            outputs=plot_output
+        ).then(
+            fn=lambda: ("tab-btn", "tab-btn", "tab-btn selected", "tab-btn"),
+            outputs=[overview_btn, scatter_btn, dashboard_btn, correlation_btn]
         )
         
         correlation_btn.click(
-            fn=lambda q, m: switch_tab_and_update("correlation_tab", q, m),
-            inputs=[question_select, metric_select],
-            outputs=[plot_output, active_tab, overview_btn, scatter_btn, dashboard_btn, correlation_btn]
+            fn=lambda: update_tab("correlation_tab"),
+            outputs=active_tab
+        ).then(
+            fn=update_dashboard,
+            inputs=[question_select, metric_select, active_tab],
+            outputs=plot_output
+        ).then(
+            fn=lambda: ("tab-btn", "tab-btn", "tab-btn", "tab-btn selected"),
+            outputs=[overview_btn, scatter_btn, dashboard_btn, correlation_btn]
         )
         
-        # CHANGE: Remove the extra Textbox inputs in dropdown change handlers
+        # Update handlers for dropdown changes
         question_select.change(
             fn=update_dashboard,
-            inputs=[question_select, metric_select, active_tab],  # REMOVED extra gr.Textbox
+            inputs=[question_select, metric_select, active_tab],
             outputs=plot_output
         )
         
         metric_select.change(
             fn=update_dashboard,
-            inputs=[question_select, metric_select, active_tab],  # REMOVED extra gr.Textbox
+            inputs=[question_select, metric_select, active_tab],
             outputs=plot_output
         )
         
