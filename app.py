@@ -615,18 +615,6 @@ def create_gradio_interface():
                 gr.Markdown("### Comprehensive analysis with multiple visualization types")
                 dashboard_plot = gr.Plot(label="Dashboard")
         
-        # Statistics summary
-        with gr.Row():
-            with gr.Column():
-                gr.Markdown(
-                    f"""
-                    ### 📋 Dataset Summary
-                    - **Total Questions**: {len(all_merged_long_dfs)}
-                    - **Available Metrics**: {len(selected_metric_sheets)}
-                    - **Total Records**: {len(final_combined_long_df) if 'final_combined_long_df' in locals() else 'N/A'}
-                    """,
-                    elem_classes=["panel"]
-                )
         
         # Set up interactivity
         inputs = [question_select, metric_select]
@@ -641,15 +629,6 @@ def create_gradio_interface():
             fn=update_charts,
             inputs=inputs,
             outputs=outputs
-        )
-        
-        # Footer
-        gr.Markdown(
-            """
-            ---
-            *Dashboard powered by Gradio & Plotly | Eye-tracking data analysis made interactive*
-            """,
-            elem_classes=["panel"]
         )
     
     return demo
