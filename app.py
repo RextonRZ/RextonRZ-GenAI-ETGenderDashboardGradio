@@ -295,7 +295,7 @@ def _create_correlation_heatmap(data, numeric_metrics, plot_title_suffix):
             ), row=1, col=col)
     
     fig.update_layout(
-        height=500, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+        height=500, plot_bgcolor='#000', paper_bgcolor='#000',
         font_color='white', title_text=f"Correlation Heatmaps by Gender {plot_title_suffix}",
         title_x=0.5, title_font_size=20
     )
@@ -308,7 +308,7 @@ def create_modern_bar_plot(data, metric, agg_func, plot_title_suffix):
     
     aoi_gender_summary = data.groupby(['Gender', 'AOI', 'Image_Type'], as_index=False).agg({metric: agg_func}).sort_values(by=['AOI', 'Gender'])
     fig = px.bar(aoi_gender_summary, x='AOI', y=metric, color='Gender', color_discrete_map=gender_palette, title=f'{metric} ({agg_func.capitalize()}) per AOI {plot_title_suffix}', height=500, barmode='group')
-    fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='white', title_x=0.5, xaxis_tickangle=-45)
+    fig.update_layout(plot_bgcolor='#000', paper_bgcolor='#000', font_color='white', title_x=0.5, xaxis_tickangle=-45)
     return fig
 
 def create_combined_bar_plot(data, metric, agg_func, plot_title_suffix):
@@ -318,7 +318,7 @@ def create_combined_bar_plot(data, metric, agg_func, plot_title_suffix):
         
     summary = data.groupby(['Image_Type', 'Gender'], as_index=False).agg({metric: agg_func})
     fig = px.bar(summary, x='Image_Type', y=metric, color='Gender', color_discrete_map=gender_palette, title=f'{metric} ({agg_func.capitalize()}) by Image Type {plot_title_suffix}', height=500, barmode='group')
-    fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='white', title_x=0.5, xaxis_title='Image Type')
+    fig.update_layout(plot_bgcolor='#000', paper_bgcolor='#000', font_color='white', title_x=0.5, xaxis_title='Image Type')
     return fig
 
 def create_modern_scatter_plot(data, dur_col, count_col, plot_title_suffix):
@@ -330,7 +330,7 @@ def create_modern_scatter_plot(data, dur_col, count_col, plot_title_suffix):
     if valid_data.empty: return go.Figure().add_annotation(text="No valid data points", showarrow=False)
     
     fig = px.scatter(valid_data, x=dur_col, y=count_col, color='Gender', symbol='Image_Type', title=f'Interactive Scatter: {count_col} vs {dur_col} {plot_title_suffix}', hover_data=['Participant_ID', 'AOI'], color_discrete_map=gender_palette, height=600)
-    fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='white', title_x=0.5, legend=dict(bgcolor='rgba(0,0,0,0)'))
+    fig.update_layout(plot_bgcolor='#000', paper_bgcolor='#000', font_color='white', title_x=0.5, legend=dict(bgcolor='rgba(0,0,0,0)'))
     return fig
 
 # --- Load Data on Startup ---
