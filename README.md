@@ -70,7 +70,7 @@ There are significant differences in at least one gaze metric between genders, p
 
 > 🧠 **After reviewing all visualizations**, it becomes clear that gender does influence gaze behavior — particularly in *Time to First Fixation* and *Total Visit Duration*, with noticeable divergence in Q2 to Q6.
 
-[![Hugging Face Spaces](https://img.shields.io/badge/🤗%20View%20Dashboard%20on-HuggingFace-blueviolet?logo=huggingface&logoColor=white)](https://huggingface.co/spaces/RextonRZ/GenAI-ETGenderDashboard)
+[![View on Hugging Face](https://img.shields.io/badge/View%20on-HuggingFace-blueviolet?logo=huggingface&logoColor=white)](https://huggingface.co/spaces/RextonRZ/GenAI-ETGenderDashboard)
 
 ---
 
