@@ -10,6 +10,8 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import warnings
 import os
+from functools import reduce
+from imblearn.over_sampling import SMOTE
 
 warnings.filterwarnings('ignore')
 
@@ -48,6 +50,7 @@ def load_and_process_data():
         participant_df_global = participant_df_global.rename(
             columns={'Participant ID': 'Participant_ID'}
         ).dropna(subset=['Gender', 'Participant_ID']).drop_duplicates(subset='Participant_ID')
+        print("Participant data loaded successfully.")
         
         questions_config = {
             'Q1': {
@@ -78,52 +81,153 @@ def load_and_process_data():
         
         selected_metric_sheets = ["Tot Fixation dur", "Fixation count", "Time to first Fixation", "Tot Visit dur"]
         
-        all_merged_long_dfs = {}
+        # --- Multi-stage processing following the original approach ---
         
-        # Process each question's data
+        # 1. Load all sheets for each question
+        all_data_sheets = {}
         for q_name, config in questions_config.items():
-            file_path = config['file_path']
-            if not os.path.exists(file_path):
-                print(f"Warning: {file_path} not found. Skipping {q_name}")
-                continue
-                
             try:
-                # Load the Excel file with all sheets
-                excel_data = pd.ExcelFile(file_path)
+                if os.path.exists(config['file_path']):
+                    xls = pd.ExcelFile(config['file_path'])
+                    all_data_sheets[q_name] = {
+                        sheet: xls.parse(sheet) for sheet in xls.sheet_names 
+                        if sheet in selected_metric_sheets
+                    }
+                else:
+                    print(f"Warning: File not found for {q_name}: {config['file_path']}")
+                    all_data_sheets[q_name] = {}
+            except Exception as e:
+                print(f"Warning: Could not load or parse file for {q_name}: {e}")
+                all_data_sheets[q_name] = {}
+
+        # 2. Clean and merge with gender data
+        all_cleaned_metrics_dfs = {}
+        for q_name, data_sheets in all_data_sheets.items():
+            cleaned_qN = {}
+            for sheet_name, df in data_sheets.items():
+                # Standardize participant column name
+                if 'Participant' in df.columns:
+                    df = df.rename(columns={'Participant': 'Participant_ID'})
                 
-                # Process each metric sheet
-                merged_sheets = []
-                for sheet_name in selected_metric_sheets:
-                    if sheet_name in excel_data.sheet_names:
-                        df = pd.read_excel(file_path, sheet_name=sheet_name)
-                        df['Metric'] = sheet_name
-                        merged_sheets.append(df)
-                
-                if merged_sheets:
-                    combined_df = pd.concat(merged_sheets, ignore_index=True)
-                    # Add question identifier
-                    combined_df['Question'] = q_name
+                if 'Participant_ID' in df.columns:
+                    # Standardize participant ID format
+                    df['Participant_ID'] = df['Participant_ID'].apply(
+                        lambda x: f'P{int(str(x)[1:]):02d}' if isinstance(x, str) and x.startswith('P') and x[1:].isdigit() 
+                        else (f'P{int(x):02d}' if pd.notna(x) and isinstance(x, (int, float)) else x)
+                    )
                     
                     # Merge with participant data
-                    if 'Participant_ID' in combined_df.columns:
-                        combined_df = combined_df.merge(
-                            participant_df_global, 
-                            on='Participant_ID', 
-                            how='left'
-                        )
-                    
-                    all_merged_long_dfs[q_name] = combined_df
-                    
-            except Exception as e:
-                print(f"Error processing {q_name}: {e}")
-                continue
+                    df_merged = df.merge(participant_df_global, on='Participant_ID', how='left')
+                    cleaned_qN[sheet_name] = df_merged.dropna(subset=['Participant_ID', 'Gender'])
+            
+            all_cleaned_metrics_dfs[q_name] = cleaned_qN
+        
+        print("Data cleaning and gender merge complete.")
 
-        # Combine all data
-        if all_merged_long_dfs:
-            final_combined_long_df = pd.concat(all_merged_long_dfs.values(), ignore_index=True)
+        # 3. Reconstruct balanced data using SMOTE
+        all_balanced_unified_dfs = {}
+        master_sheet = 'Tot Fixation dur'
+        
+        for q_name, config in questions_config.items():
+            cleaned_metrics_qN = all_cleaned_metrics_dfs.get(q_name, {})
+            
+            if master_sheet not in cleaned_metrics_qN or cleaned_metrics_qN[master_sheet].empty:
+                print(f"Skipping SMOTE for {q_name}: master sheet missing.")
+                all_balanced_unified_dfs[q_name] = cleaned_metrics_qN
+                continue
+            
+            df_master = cleaned_metrics_qN[master_sheet]
+            aoi_cols = [col for col in config['aoi_columns'] if col in df_master.columns]
+            
+            # Group by participant and take first occurrence
+            df_repr = df_master.groupby('Participant_ID').first().reset_index()
+            X = df_repr[aoi_cols].fillna(0)
+            y = df_repr['Gender']
+
+            # Apply SMOTE if we have enough samples
+            if y.nunique() < 2 or y.value_counts().min() < 2:
+                df_resampled = df_repr
+            else:
+                try:
+                    smote = SMOTE(random_state=42, k_neighbors=max(1, y.value_counts().min() - 1))
+                    X_res, y_res = smote.fit_resample(X, y)
+                    df_resampled = pd.DataFrame(X_res, columns=aoi_cols)
+                    df_resampled['Gender'] = y_res
+                    df_resampled['Participant_ID'] = [f'Balanced_{q_name}_{i}' for i in range(len(df_resampled))]
+                except Exception as e:
+                    print(f"SMOTE failed for {q_name}: {e}. Using original data.")
+                    df_resampled = df_repr
+            
+            # Reconstruct other sheets based on gender means
+            reconstructed_qN = {}
+            for sheet_name, df_orig in cleaned_metrics_qN.items():
+                if sheet_name == master_sheet:
+                    reconstructed_qN[sheet_name] = df_resampled
+                else:
+                    sheet_aoi_cols = [c for c in config['aoi_columns'] if c in df_orig.columns]
+                    if sheet_aoi_cols:
+                        gender_means = df_orig.groupby('Gender')[sheet_aoi_cols].mean()
+                        reconstructed_rows = []
+                        for _, mr in df_resampled.iterrows():
+                            row_data = {
+                                'Participant_ID': mr['Participant_ID'], 
+                                'Gender': mr['Gender']
+                            }
+                            row_data.update(gender_means.loc[mr['Gender']])
+                            reconstructed_rows.append(row_data)
+                        reconstructed_qN[sheet_name] = pd.DataFrame(reconstructed_rows)
+            
+            all_balanced_unified_dfs[q_name] = reconstructed_qN
+        
+        print("Data balancing complete.")
+
+        # 4. Melt to long format
+        all_merged_long_dfs = {}
+        for q_name, config in questions_config.items():
+            reconstructed_dfs = all_balanced_unified_dfs.get(q_name, {})
+            if not reconstructed_dfs:
+                continue
+            
+            long_dfs = []
+            for sheet_name, df_sheet in reconstructed_dfs.items():
+                aoi_cols_to_melt = [c for c in config['aoi_columns'] if c in df_sheet.columns]
+                if aoi_cols_to_melt:
+                    df_long = df_sheet.melt(
+                        id_vars=['Participant_ID', 'Gender'], 
+                        value_vars=aoi_cols_to_melt, 
+                        var_name='AOI', 
+                        value_name=sheet_name
+                    )
+                    long_dfs.append(df_long)
+            
+            if long_dfs:
+                # Merge all metric sheets for this question
+                merged_df = reduce(
+                    lambda left, right: pd.merge(left, right, on=['Participant_ID', 'Gender', 'AOI'], how='outer'), 
+                    long_dfs
+                )
+                
+                # Add image type classification
+                merged_df['Image_Type'] = merged_df['AOI'].apply(
+                    lambda a: 'AI' if ' B' in str(a) else 'Real'
+                )
+                
+                all_merged_long_dfs[q_name] = merged_df
+        
+        print("Melting to long format complete.")
+
+        # 5. Create final combined dataframe
+        all_q_dfs = []
+        for q, df in all_merged_long_dfs.items():
+            if not df.empty:
+                df_copy = df.copy()
+                df_copy['Question'] = q
+                all_q_dfs.append(df_copy)
+        
+        if all_q_dfs:
+            final_combined_long_df = pd.concat(all_q_dfs, ignore_index=True)
         else:
-            print("No data loaded successfully. Creating sample data.")
-            return create_sample_data()
+            final_combined_long_df = pd.DataFrame()
 
         print(f"--- Data processing finished. Loaded {len(all_merged_long_dfs)} question sets ---")
         return all_merged_long_dfs, final_combined_long_df, selected_metric_sheets
@@ -151,6 +255,15 @@ def create_sample_data():
         for participant in range(1, n_participants + 1):
             for aoi in range(1, n_aois + 1):
                 for image_type in ['A', 'B']:
+                    row_data = {
+                        'Participant_ID': f'P{participant:03d}',
+                        'AOI': f'{q}_AOI_{aoi}_{image_type}',
+                        'Image_Type': 'AI' if image_type == 'B' else 'Real',
+                        'Question': q,
+                        'Gender': np.random.choice(['Male', 'Female'])
+                    }
+                    
+                    # Add metric values
                     for metric in selected_metric_sheets:
                         if metric == "Time to first Fixation":
                             value = np.random.exponential(500)  # milliseconds
@@ -161,16 +274,9 @@ def create_sample_data():
                         else:  # Tot Visit dur
                             value = np.random.gamma(3, 150)  # milliseconds
                         
-                        sample_data.append({
-                            'Participant_ID': f'P{participant:03d}',
-                            'AOI': f'{q}_AOI_{aoi}',
-                            'Image_Type': image_type,
-                            'Question': q,
-                            'Metric': metric,
-                            'Value': value,
-                            'Gender': np.random.choice(['Male', 'Female']),
-                            metric: value  # Add metric as column name too
-                        })
+                        row_data[metric] = value
+                    
+                    sample_data.append(row_data)
     
     final_combined_long_df = pd.DataFrame(sample_data)
     
@@ -212,7 +318,9 @@ def create_modern_bar_plot(data, metric, agg_func, plot_title_suffix):
         )
         
         fig.update_layout(
-            template="plotly_dark",
+            plot_bgcolor='rgba(0,0,0,0.8)',
+            paper_bgcolor='rgba(0,0,0,0.8)',
+            font_color='white',
             title_x=0.5,
             xaxis_tickangle=-45
         )
@@ -250,7 +358,9 @@ def create_combined_bar_plot(data, metric, agg_func, plot_title_suffix):
         )
         
         fig.update_layout(
-            template="plotly_dark",
+            plot_bgcolor='rgba(0,0,0,0.8)',
+            paper_bgcolor='rgba(0,0,0,0.8)',
+            font_color='white',
             title_x=0.5
         )
         
@@ -289,7 +399,9 @@ def create_modern_scatter_plot(data, dur_col, count_col, plot_title_suffix):
         )
         
         fig.update_layout(
-            template="plotly_dark",
+            plot_bgcolor='rgba(0,0,0,0.8)',
+            paper_bgcolor='rgba(0,0,0,0.8)',
+            font_color='white',
             title_x=0.5
         )
         
@@ -392,7 +504,9 @@ def create_comparison_dashboard(data, metric, metrics, plot_title_suffix):
             print(f"Error creating table: {table_error}")
         
         fig.update_layout(
-            template="plotly_dark",
+            plot_bgcolor='rgba(0,0,0,0.8)',
+            paper_bgcolor='rgba(0,0,0,0.8)',
+            font_color='white',
             height=850,
             title_x=0.5,
             showlegend=False
