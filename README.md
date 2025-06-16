@@ -1,5 +1,5 @@
 ---
-title: Eye Tracking Analytics Dashboard
+title: GenAI-ETGenderDashboard
 emoji: 👁️
 colorFrom: blue
 colorTo: purple
@@ -10,71 +10,135 @@ pinned: false
 license: mit
 ---
 
-# 👁️ Eye-Tracking Analytics Dashboard
+# 👁️ GenAI-ETGenderDashboardGradio
 
-An interactive web application for analyzing eye-tracking data across different question sets and metrics. This dashboard provides comprehensive visualization and analysis tools for understanding gaze patterns, fixation behaviors, and attention distribution.
-
-## 🚀 Features
-
-### Interactive Visualizations
-- **📊 Bar Chart Analysis**: Compare metrics across different Areas of Interest (AOIs) by gender
-- **🔍 Correlation Analysis**: Scatter plots showing relationships between fixation duration and count  
-- **📈 Multi-Dimensional Dashboard**: Comprehensive analysis with box plots, histograms, violin plots, and summary statistics
-
-### Metrics Supported
-- **Total Fixation Duration**: Time spent looking at specific areas
-- **Fixation Count**: Number of individual fixations
-- **Time to First Fixation**: How quickly participants notice areas
-- **Total Visit Duration**: Overall time spent in regions
-
-### Data Organization
-- **Question Sets Q1-Q6**: Organized by different experimental conditions
-- **Gender-based Analysis**: Compare patterns between male and female participants
-- **Image Type Comparison**: Analyze differences between A/B image variants
-- **AOI-level Insights**: Detailed breakdowns by Areas of Interest
-
-## 🎯 Use Cases
-
-- **Research Analysis**: Academic studies on visual attention and perception
-- **UX Research**: Understanding user interface engagement patterns
-- **Marketing Research**: Analyzing advertisement effectiveness and visual hierarchy
-- **Educational Studies**: Investigating learning patterns and visual processing
-
-## 📊 Data Structure
-
-The dashboard processes eye-tracking data with the following structure:
-- **Participants**: Individual subject data with demographic information
-- **Questions**: Different experimental scenarios (Q1-Q6)
-- **AOIs**: Specific regions of interest within each stimulus
-- **Metrics**: Quantitative measures of eye movement behavior
-
-## 🛠️ Technical Stack
-
-- **Frontend**: Gradio 4.44.0 for interactive web interface
-- **Visualization**: Plotly for dynamic, interactive charts
-- **Data Processing**: Pandas for data manipulation and analysis
-- **Computation**: NumPy for numerical operations
-- **File Handling**: OpenPyXL for Excel file processing
-
-## 📈 Getting Started
-
-1. **Select Question Set**: Choose from Q1-Q6 or view all combined data
-2. **Choose Metric**: Pick the eye-tracking measure you want to analyze
-3. **Explore Visualizations**: Navigate through different chart types in the tabs
-4. **Interactive Analysis**: Hover over charts for detailed data points
-
-## 📋 Sample Data
-
-If no data files are found, the dashboard automatically generates sample data for demonstration purposes, allowing you to explore all features and functionality.
-
-## 🔧 Development
-
-This dashboard is built with modern web technologies and deployed on Hugging Face Spaces for easy access and sharing. The interface is responsive and works across different devices and screen sizes.
-
-## 📄 License
-
-MIT License - Feel free to use and modify for your research and projects.
+An interactive Gradio dashboard for analyzing **eye-tracking metrics** with a focus on **gender-based differences in visual attention** while distinguishing between **AI-generated** and **real images**.
 
 ---
 
-*Built with ❤️ for the eye-tracking research community*
+## 📌 Research Focus
+
+**Research Question 3:**
+> *Are there gender-based differences in gaze behavior when distinguishing between AI and real images?*
+
+This dashboard supports the investigation of gaze behavior across gender, testing whether males and females exhibit statistically and visually distinguishable patterns in how they attend to different Areas of Interest (AOIs) when identifying AI-generated content.
+
+---
+
+## 🎯 Objectives
+
+- To compare gaze behavior across gender while participants differentiate between AI and real images.
+- To determine whether **eye-tracking metrics** differ significantly by gender using statistical tests.
+- To **visually highlight** any gender-driven differences in attention distribution and scanning strategies.
+
+---
+
+## 🧪 Null & Alternative Hypotheses
+
+**H₀ (Null):**  
+There are no significant differences in gaze behavior metrics between male and female participants when distinguishing between AI-generated and real images.
+
+**H₁ (Alternative):**  
+There are significant differences in at least one gaze metric between genders, potentially varying across image content and AOIs.
+
+---
+
+## 👨‍🔬 Methodology Summary
+
+- **Participants:** 84 students (53 male, 31 female), balanced using SMOTE.
+- **Apparatus:** Tobii Pro Fusion eye tracker at 50Hz.
+- **Stimuli:** 6 AI vs real image pairs; participants identify the AI-generated image.
+- **Metrics collected:**
+  - Total Fixation Duration
+  - Fixation Count
+  - Time to First Fixation
+  - Total Visit Duration
+
+- **AOIs** were manually defined using **Tobii Pro Lab**., grouped into facial features, backgrounds, and semantic image parts.  
+  [📄 AOI Mapping & Definitions →](https://docs.google.com/document/d/1FZL9sZbA2ZqEguZVm8fa-xwa6SUHsLyZ4YO3HMLMc6I/edit)
+
+---
+
+## 📊 Dashboard Features
+
+### ➤ Gender-Based Visualization Tools
+
+- **Bar Charts:** Metric-by-metric comparison by gender across all AOIs and questions (Q1–Q6)
+- **Scatter Plots:** Relationship between fixation duration and fixation count
+- **Box Plots / Histograms / Violin Plots:** Distribution of visual attention metrics
+- **Correlation Heatmaps:** Visual strategy patterns by gender
+
+> 🧠 **After reviewing all visualizations**, it becomes clear that gender does influence gaze behavior — particularly in *Time to First Fixation* and *Total Visit Duration*, with noticeable divergence in Q2 to Q6.
+
+[![Hugging Face Spaces](https://img.shields.io/badge/🤗%20View%20Dashboard%20on-HuggingFace-blueviolet?logo=huggingface&logoColor=white)](https://huggingface.co/spaces/RextonRZ/GenAI-ETGenderDashboard)
+
+---
+
+## 📈 Statistical Testing Methods
+
+All visual results are statistically validated using:
+
+| Test | Use Case |
+|------|----------|
+| **Shapiro–Wilk Test** | Assess metric normality per gender group |
+| **Independent Samples t-test** | For normally distributed data (p ≥ 0.05) |
+| **Mann–Whitney U Test** | For non-normal data (p < 0.05) |
+| **Pearson Correlation** | Explore inter-metric dependencies |
+| **SMOTE** | Synthetic balancing for gender parity |
+
+**Key Result:** Mann–Whitney U tests revealed significant gender-based differences in visual attention for Q2 to Q6 , **rejecting the null hypothesis**. There are significant differences in at least one gaze metric between genders, potentially varying across image content and AOIs.
+
+---
+
+## 📂 File Overview
+
+| File | Description |
+|------|-------------|
+| `app.py` | Main Gradio dashboard code |
+| `Full Visualisations for RQ3.pdf` | Static graphs for RQ3 |
+| `Assignment Report.pdf` | Full academic write-up of methodology, data collection, and results |
+| `AOI Mapping.pdf` | Detailed AOI definitions per image |
+| `requirements.txt` | Libraries for local or HF deployment |
+| `GenAIEyeTrackingDatasetRQ3.ipynb` | Pre-dashboard notebook containing data cleaning, gender balancing (SMOTE), statistical tests and simple visualizations to explore gender-based differences |
+
+---
+
+## 🚀 Technologies Used
+
+- **Frontend:** Gradio 4.44.0
+- **Visualization:** Plotly, Seaborn
+- **Data Processing:** Pandas, NumPy
+- **Statistical Testing:** Scipy, Scikit-learn
+- **File Handling:** OpenPyXL
+- **Balancing:** imbalanced-learn (SMOTE)
+
+---
+
+## 💡 Key Insight
+
+> **After thoroughly analyzing all the graphs and statistical outcomes, gender differences clearly affect visual attention based on certain gaze metrics. In particular, early fixation behavior (Time to First Fixation) and overall engagement (Total Visit Duration) reveal that males and females interact with AI versus real images in subtly distinct ways.**
+
+---
+
+## 📜 License
+
+MIT License – feel free to reuse and build upon this work with attribution.
+
+---
+## 👥 Contributors
+
+- Rui Zhe Ooi  
+- Shin Yen Lee  
+- Rui Zhe Khor  
+- Iman Soffea  
+- Min Zi Teoh  
+- Jia Xin Low  
+(Supervised by Dr. Unaizah Hanum)
+
+---
+
+## ❤️ Acknowledgements
+
+Thanks to all participants and the Faculty of Computer Science, University of Malaya, for supporting this research.
+
+---
