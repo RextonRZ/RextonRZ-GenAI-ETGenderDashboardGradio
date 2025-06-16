@@ -614,7 +614,7 @@ def create_gradio_interface():
     
     with gr.Blocks(theme=theme, css=custom_css, title="Eye-Tracking Analytics Dashboard") as demo:
         # Header with modern design and background
-        with gr.Box(elem_classes="header-content"):
+        with gr.Column(elem_classes="header-content"):
             with gr.Column(elem_classes="content"):
                 gr.HTML("""
                 <div style="display: flex; align-items: center; margin-bottom: 10px;">
@@ -665,7 +665,7 @@ def create_gradio_interface():
                 )
         
         # Modern tab-based interface instead of accordions
-        with gr.Box(elem_classes="tabs"):
+        with gr.Column(elem_classes="tabs"):
             active_tab = gr.State("overview_tab")
             
             with gr.Row(elem_classes="tab-nav") as tab_nav:
