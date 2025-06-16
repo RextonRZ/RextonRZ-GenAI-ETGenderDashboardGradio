@@ -55,7 +55,6 @@ There are significant differences in at least one gaze metric between genders, p
   - Total Visit Duration
 
 - **AOIs** were manually defined using **Tobii Pro Lab**., grouped into facial features, backgrounds, and semantic image parts.  
-  [📄 AOI Mapping & Definitions →](https://docs.google.com/document/d/1FZL9sZbA2ZqEguZVm8fa-xwa6SUHsLyZ4YO3HMLMc6I/edit)
 
 ---
 
