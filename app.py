@@ -382,11 +382,11 @@ def create_gradio_interface():
         # Header with custom HTML and CSS
         gr.HTML("""
         <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; text-align: center; margin-bottom: 20px;'>
-            <h1 style='color: white; font-size: 2.5em; margin: 0; font-weight: 700; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);'>
+            <h1 style='color: white; font-size: 2.0em; margin: 0; font-weight: 700; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);'>
                 🧠 Eye-Tracking Analytics Dashboard
             </h1>
             <p style='color: rgba(255,255,255,0.9); font-size: 1.2em; margin: 10px 0 0 0; font-weight: 300;'>
-                Advanced Visual Analytics & Data Exploration Platform
+                Visual Attention Differences Between AI-Generated and Real Images Based on Gender
             </p>
         </div>
         """)
