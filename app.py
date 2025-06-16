@@ -1,5 +1,5 @@
 # ==============================================================================
-# GRADIO DASHBOARD FOR HUGGING FACE DEPLOYMENT
+# GRADIO DASHBOARD FOR HUGGING FACE DEPLOYMENT WITH LIGHT/DARK MODE TOGGLE
 # ==============================================================================
 
 import gradio as gr
@@ -18,11 +18,21 @@ import traceback
 warnings.filterwarnings('ignore')
 
 # --- Styling and Global Configuration ---
-MODERN_COLORS = {
+MODERN_COLORS_DARK = {
     'primary': '#00D4FF', 'secondary': '#FF6B6B', 'accent': '#4ECDC4', 'dark': '#1A1A2E',
     'light': '#16213E', 'success': '#00F5A0', 'warning': '#FFD93D', 'text': '#FFFFFF'
 }
-gender_palette = {'Male': MODERN_COLORS['primary'], 'Female': MODERN_COLORS['secondary']}
+
+MODERN_COLORS_LIGHT = {
+    'primary': '#0066CC', 'secondary': '#E74C3C', 'accent': '#2ECC71', 'dark': '#F8F9FA',
+    'light': '#FFFFFF', 'success': '#27AE60', 'warning': '#F39C12', 'text': '#2C3E50'
+}
+
+gender_palette_dark = {'Male': MODERN_COLORS_DARK['primary'], 'Female': MODERN_COLORS_DARK['secondary']}
+gender_palette_light = {'Male': MODERN_COLORS_LIGHT['primary'], 'Female': MODERN_COLORS_LIGHT['secondary']}
+
+# Global theme state - this is the single source of truth for the backend
+current_theme = "dark"
 
 # --- DATA LOADING AND PROCESSING (Faithfully replicating the notebook) ---
 def load_and_process_data():
@@ -32,12 +42,10 @@ def load_and_process_data():
     try:
         base_path = 'GenAIEyeTrackingCleanedDataset/'
         
-        # Check if data directory exists
         if not os.path.exists(base_path):
             print(f"Warning: Data directory {base_path} not found. Creating sample data.")
             return create_sample_data()
 
-        # Load participant data
         participant_file = os.path.join(base_path, 'ParticipantList.xlsx')
         if not os.path.exists(participant_file):
             print(f"Warning: {participant_file} not found. Creating sample data.")
@@ -63,7 +71,6 @@ def load_and_process_data():
         selected_metric_sheets = ["Tot Fixation dur", "Fixation count", "Time to first Fixation", "Tot Visit dur"]
         master_sheet_for_balancing = 'Tot Fixation dur'
 
-        # Stage 1: Load Raw Data Sheets
         all_data_sheets = {}
         for q_name, config in questions_config.items():
             if os.path.exists(config['file_path']):
@@ -72,7 +79,6 @@ def load_and_process_data():
             else:
                 all_data_sheets[q_name] = {}
         
-        # Stage 2: Clean and Merge Gender
         all_cleaned_metrics_dfs = {}
         for q_name, data_sheets_qN in all_data_sheets.items():
             cleaned_metrics_dfs_qN = {}
@@ -86,7 +92,6 @@ def load_and_process_data():
             all_cleaned_metrics_dfs[q_name] = cleaned_metrics_dfs_qN
         print("Data cleaning and gender merge complete.")
 
-        # Stage 3: SMOTE Balancing and Reconstruction
         all_balanced_unified_dfs = {}
         for q_name, config in questions_config.items():
             cleaned_metrics_qN = all_cleaned_metrics_dfs.get(q_name, {})
@@ -134,7 +139,6 @@ def load_and_process_data():
             all_balanced_unified_dfs[q_name] = current_q_reconstructed_dfs
         print("Data balancing and reconstruction complete.")
 
-        # Stage 4: Melt and Combine
         all_merged_long_dfs = {}
         for q_name, config in questions_config.items():
             reconstructed_dfs = all_balanced_unified_dfs.get(q_name, {})
@@ -150,7 +154,6 @@ def load_and_process_data():
             if list_of_long_dfs:
                 merged_df = reduce(lambda left, right: pd.merge(left, right, on=['Participant_ID', 'Gender', 'AOI'], how='outer'), list_of_long_dfs)
                 
-                # Add image type
                 def get_image_type(aoi_name_str):
                     if isinstance(aoi_name_str, str):
                         if re.search(r'\sA\d*$', aoi_name_str.strip()): return 'Real'
@@ -160,7 +163,6 @@ def load_and_process_data():
                 
                 all_merged_long_dfs[q_name] = merged_df
 
-        # Stage 5: Final Combination
         final_combined_long_df = pd.concat([
             df.assign(Question=q) for q, df in all_merged_long_dfs.items() if not df.empty
         ], ignore_index=True)
@@ -202,11 +204,23 @@ def create_sample_data():
     return all_merged_long_dfs, final_combined_long_df, selected_metric_sheets
 
 
-# --- Plotting Functions (Replicated from Notebook) ---
+# --- THEME-AWARE PLOTTING FUNCTIONS ---
+def get_theme_colors():
+    """Get colors based on the global current_theme variable."""
+    return (MODERN_COLORS_DARK, gender_palette_dark) if current_theme == "dark" else (MODERN_COLORS_LIGHT, gender_palette_light)
+
+def get_plot_layout():
+    """Get plot layout based on the global current_theme variable."""
+    if current_theme == "dark":
+        return {'plot_bgcolor': '#000000', 'paper_bgcolor': '#000000', 'font_color': 'white'}
+    else:
+        return {'plot_bgcolor': '#FFFFFF', 'paper_bgcolor': '#FFFFFF', 'font_color': '#2C3E50'}
+
 def _create_4_panel_dashboard(data, selected_metric, plot_title_suffix):
-    """Creates the 4-panel dashboard figure."""
+    colors, gender_palette = get_theme_colors()
+    layout = get_plot_layout()
     if data is None or data.empty or selected_metric not in data.columns:
-        return go.Figure().add_annotation(text="No data for this view", showarrow=False)
+        return go.Figure().add_annotation(text="No data for this view", showarrow=False).update_layout(**layout)
 
     fig = make_subplots(
         rows=2, cols=2,
@@ -214,148 +228,121 @@ def _create_4_panel_dashboard(data, selected_metric, plot_title_suffix):
         specs=[[{"type": "box"}, {"type": "violin"}], [{"type": "histogram"}, {"type": "table"}]]
     )
     
-    # Panel 1: Grouped Box Plot
     for gender in ['Male', 'Female']:
         subset = data[data['Gender'] == gender]
-        fig.add_trace(go.Box(
-            y=subset[selected_metric], x=subset['Image_Type'], name=gender,
-            marker_color=gender_palette.get(gender), legendgroup=gender, showlegend=True, boxpoints='outliers'
-        ), row=1, col=1)
+        fig.add_trace(go.Box(y=subset[selected_metric], x=subset['Image_Type'], name=gender, marker_color=gender_palette.get(gender), legendgroup=gender, showlegend=True, boxpoints='outliers'), row=1, col=1)
     fig.update_layout(boxmode='group', xaxis1_title='Image Type')
         
-    # Panel 2: Split Violin Plot
     for gender in ['Male', 'Female']:
         for img_type in data['Image_Type'].unique():
             subset = data[(data['Image_Type'] == img_type) & (data['Gender'] == gender)]
             if not subset.empty:
-                fig.add_trace(go.Violin(
-                    y=subset[selected_metric], x0=str(img_type), name=gender,
-                    side='negative' if gender == 'Male' else 'positive',
-                    marker_color=gender_palette.get(gender), points=False,
-                    legendgroup=gender, showlegend=False, meanline_visible=True
-                ), row=1, col=2)
+                fig.add_trace(go.Violin(y=subset[selected_metric], x0=str(img_type), name=gender, side='negative' if gender == 'Male' else 'positive', marker_color=gender_palette.get(gender), points=False, legendgroup=gender, showlegend=False, meanline_visible=True), row=1, col=2)
     fig.update_layout(violinmode='overlay', xaxis2_title='Image Type')
         
-    # Panel 3: Overlapping Histogram
     for gender in ['Male', 'Female']:
         subset = data[data['Gender'] == gender]
-        fig.add_trace(go.Histogram(
-            x=subset[selected_metric], name=gender, marker_color=gender_palette.get(gender),
-            legendgroup=gender, showlegend=False, opacity=0.7
-        ), row=2, col=1)
+        fig.add_trace(go.Histogram(x=subset[selected_metric], name=gender, marker_color=gender_palette.get(gender), legendgroup=gender, showlegend=False, opacity=0.7), row=2, col=1)
     fig.update_layout(barmode='overlay')
 
-    # Panel 4: Summary Table (with improved styling)
     summary_stats = data.groupby(['Image_Type', 'Gender'])[selected_metric].agg(['count', 'mean', 'std', 'min', 'max']).round(2).reset_index()
+    header_color = colors['primary']
+    cell_color = 'rgba(40,40,60,0.8)' if current_theme == "dark" else 'rgba(240, 240, 240, 0.9)'
+    font_color = colors['text']
+    header_font_color = 'white'
+
     fig.add_trace(go.Table(
-        header=dict(
-            values=[f'<b>{c.upper()}</b>' for c in summary_stats.columns],
-            fill_color=MODERN_COLORS['primary'], font_color='white', align='center',
-            font=dict(size=12)
-        ),
-        cells=dict(
-            values=[summary_stats[c] for c in summary_stats.columns],
-            fill_color='rgba(40,40,60,0.8)', font_color='white', align='center',
-            font=dict(size=11)
-        )
+        header=dict(values=[f'<b>{c.upper()}</b>' for c in summary_stats.columns], fill_color=header_color, font_color=header_font_color, align='center', font=dict(size=12)),
+        cells=dict(values=[summary_stats[c] for c in summary_stats.columns], fill_color=cell_color, font_color=font_color, align='center', font=dict(size=11))
     ), row=2, col=2)
 
-    # Final Layout
-    fig.update_layout(
-        height=850, plot_bgcolor='#000', paper_bgcolor='#000',
-        font_color='white', title_text=f'"{selected_metric}" - Analysis Dashboard {plot_title_suffix}',
-        title_x=0.5, title_font_size=20,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
-    )
+    fig.update_layout(height=850, **layout, title_text=f'"{selected_metric}" - Analysis Dashboard {plot_title_suffix}', title_x=0.5, title_font_size=20, legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
     fig.update_xaxes(title_text=selected_metric, row=2, col=1)
     fig.update_yaxes(title_text="Frequency", row=2, col=1)
     return fig
 
 def _create_correlation_heatmap(data, numeric_metrics, plot_title_suffix):
-    """Creates the correlation heatmap figure."""
+    layout = get_plot_layout()
     genders_present = sorted([g for g in data['Gender'].unique() if pd.notna(g)])
     if not genders_present or len(numeric_metrics) < 2:
-        return go.Figure().add_annotation(text="Not enough data for heatmap", showarrow=False)
+        return go.Figure().add_annotation(text="Not enough data for heatmap", showarrow=False).update_layout(**layout)
 
-    fig = make_subplots(
-        rows=1, cols=len(genders_present),
-        subplot_titles=[f"Metric Correlation ({gender})" for gender in genders_present]
-    )
-
+    fig = make_subplots(rows=1, cols=len(genders_present), subplot_titles=[f"Metric Correlation ({gender})" for gender in genders_present])
     for i, gender in enumerate(genders_present):
         col = i + 1
         subset_corr = data[data['Gender'] == gender][numeric_metrics]
         if not subset_corr.empty:
             corr_matrix = subset_corr.corr()
-            fig.add_trace(go.Heatmap(
-                z=corr_matrix.values, x=corr_matrix.columns, y=corr_matrix.columns,
-                colorscale='RdBu_r', zmin=-1, zmax=1, text=corr_matrix.values,
-                texttemplate="%{text:.2f}", textfont={"size":9},
-                hovertemplate='Metric 1: %{y}<br>Metric 2: %{x}<br>Correlation: %{z:.2f}<extra></extra>'
-            ), row=1, col=col)
+            fig.add_trace(go.Heatmap(z=corr_matrix.values, x=corr_matrix.columns, y=corr_matrix.columns, colorscale='RdBu_r', zmin=-1, zmax=1, text=corr_matrix.values, texttemplate="%{text:.2f}", textfont={"size":9}, hovertemplate='Metric 1: %{y}<br>Metric 2: %{x}<br>Correlation: %{z:.2f}<extra></extra>'), row=1, col=col)
     
-    fig.update_layout(
-        height=500, plot_bgcolor='#000', paper_bgcolor='#000',
-        font_color='white', title_text=f"Correlation Heatmaps by Gender {plot_title_suffix}",
-        title_x=0.5, title_font_size=20
-    )
+    fig.update_layout(height=500, **layout, title_text=f"Correlation Heatmaps by Gender {plot_title_suffix}", title_x=0.5, title_font_size=20)
     return fig
 
 def create_modern_bar_plot(data, metric, agg_func, plot_title_suffix):
-    """Creates bar plot, using notebook's logic."""
+    layout = get_plot_layout()
+    _, gender_palette = get_theme_colors()
     if data is None or data.empty or metric not in data.columns:
-        return go.Figure().add_annotation(text="No data for bar plot", showarrow=False)
-    
-    aoi_gender_summary = data.groupby(['Gender', 'AOI', 'Image_Type'], as_index=False).agg({metric: agg_func}).sort_values(by=['AOI', 'Gender'])
-    fig = px.bar(aoi_gender_summary, x='AOI', y=metric, color='Gender', color_discrete_map=gender_palette, title=f'{metric} ({agg_func.capitalize()}) per AOI {plot_title_suffix}', height=500, barmode='group')
-    fig.update_layout(plot_bgcolor='#000', paper_bgcolor='#000', font_color='white', title_x=0.5, xaxis_tickangle=-45)
+        return go.Figure().add_annotation(text="No data for bar plot", showarrow=False).update_layout(**layout)
+
+    aoi_gender_summary = data.groupby(['Gender', 'AOI', 'Image_Type'], as_index=False).agg({metric: agg_func})
+    if aoi_gender_summary.empty:
+        return go.Figure().add_annotation(text="No data for this filter", showarrow=False).update_layout(**layout)
+
+    aoi_gender_summary['AOI_Labeled'] = aoi_gender_summary.apply(lambda row: f"{row['AOI']} ({row['Image_Type']})", axis=1)
+    aoi_gender_summary = aoi_gender_summary.sort_values(by=['Image_Type', 'AOI'], ascending=[False, True])
+
+    fig = px.bar(aoi_gender_summary, x='AOI_Labeled', y=metric, color='Gender', color_discrete_map=gender_palette, title=f'{metric} ({agg_func.capitalize()}) per AOI {plot_title_suffix}', height=600, barmode='group')
+    fig.update_layout(**layout, title_x=0.5, xaxis_tickangle=-45, xaxis_title="Area of Interest (Image Type)")
     return fig
 
 def create_combined_bar_plot(data, metric, agg_func, plot_title_suffix):
-    """Creates combined bar plot, using notebook's logic."""
+    layout = get_plot_layout()
+    _, gender_palette = get_theme_colors()
     if data is None or data.empty or metric not in data.columns:
-        return go.Figure().add_annotation(text="No data for bar plot", showarrow=False)
+        return go.Figure().add_annotation(text="No data for bar plot", showarrow=False).update_layout(**layout)
         
     summary = data.groupby(['Image_Type', 'Gender'], as_index=False).agg({metric: agg_func})
     fig = px.bar(summary, x='Image_Type', y=metric, color='Gender', color_discrete_map=gender_palette, title=f'{metric} ({agg_func.capitalize()}) by Image Type {plot_title_suffix}', height=500, barmode='group')
-    fig.update_layout(plot_bgcolor='#000', paper_bgcolor='#000', font_color='white', title_x=0.5, xaxis_title='Image Type')
+    fig.update_layout(**layout, title_x=0.5, xaxis_title='Image Type')
     return fig
 
 def create_modern_scatter_plot(data, dur_col, count_col, plot_title_suffix):
-    """Creates scatter plot, using notebook's logic."""
+    layout = get_plot_layout()
+    _, gender_palette = get_theme_colors()
     if data is None or data.empty or dur_col not in data.columns or count_col not in data.columns:
-        return go.Figure().add_annotation(text="No data for scatter plot", showarrow=False)
+        return go.Figure().add_annotation(text="No data for scatter plot", showarrow=False).update_layout(**layout)
 
     valid_data = data.dropna(subset=[dur_col, count_col])
-    if valid_data.empty: return go.Figure().add_annotation(text="No valid data points", showarrow=False)
+    if valid_data.empty: return go.Figure().add_annotation(text="No valid data points", showarrow=False).update_layout(**layout)
     
     fig = px.scatter(valid_data, x=dur_col, y=count_col, color='Gender', symbol='Image_Type', title=f'Interactive Scatter: {count_col} vs {dur_col} {plot_title_suffix}', hover_data=['Participant_ID', 'AOI'], color_discrete_map=gender_palette, height=600)
-    fig.update_layout(plot_bgcolor='#000', paper_bgcolor='#000', font_color='white', title_x=0.5, legend=dict(bgcolor='rgba(0,0,0,0)'))
+    fig.update_layout(**layout, title_x=0.5, legend=dict(bgcolor='rgba(0,0,0,0)'))
     return fig
 
 # --- Load Data on Startup ---
 print("Loading and processing data. This may take a moment...")
 all_merged_long_dfs, final_combined_long_df, selected_metric_sheets = load_and_process_data()
 
-# --- Main Dashboard Function ---
-def update_dashboard(question, metric):
-    """Update all charts based on user selection and return a tuple of plots."""
+# --- BACKEND LOGIC FUNCTIONS ---
+def update_all_plots(question, metric, image_types_to_show):
+    """Generates all plots based on user inputs and the current theme."""
     try:
         df_to_plot = final_combined_long_df if question == 'All Combined' else all_merged_long_dfs.get(question, pd.DataFrame())
         
+        layout = get_plot_layout()
         if df_to_plot.empty:
-            # Return empty plots if no data
-            empty_fig = go.Figure().add_annotation(text="No data available", showarrow=False)
+            empty_fig = go.Figure().add_annotation(text="No data available", showarrow=False).update_layout(**layout)
             return empty_fig, empty_fig, empty_fig, empty_fig
         
         agg_func = 'mean' if 'Time to first Fixation' in metric else 'sum'
         plot_title_suffix = f"({question})"
         
-        # Create plots
+        bar_chart_data = df_to_plot[df_to_plot['Image_Type'].isin(image_types_to_show or [])]
+        
         if question != 'All Combined':
-            bar_chart = create_modern_bar_plot(df_to_plot, metric, agg_func, plot_title_suffix)
+            bar_chart = create_modern_bar_plot(bar_chart_data, metric, agg_func, plot_title_suffix)
         else:
-            bar_chart = create_combined_bar_plot(df_to_plot, metric, agg_func, plot_title_suffix)
+            bar_chart = create_combined_bar_plot(bar_chart_data, metric, agg_func, plot_title_suffix)
             
         scatter_chart = create_modern_scatter_plot(df_to_plot, 'Tot Fixation dur', 'Fixation count', plot_title_suffix)
         dashboard_chart = _create_4_panel_dashboard(df_to_plot, metric, plot_title_suffix)
@@ -363,25 +350,81 @@ def update_dashboard(question, metric):
         
         return dashboard_chart, heatmap_chart, bar_chart, scatter_chart
     except Exception as e:
-        print(f"Error in update_dashboard: {e}")
-        empty_fig = go.Figure().add_annotation(text=f"Error: {str(e)}", showarrow=False)
+        print(f"Error in update_all_plots: {e}\n{traceback.format_exc()}")
+        layout = get_plot_layout()
+        empty_fig = go.Figure().add_annotation(text=f"Error: {str(e)}", showarrow=False).update_layout(**layout)
         return empty_fig, empty_fig, empty_fig, empty_fig
 
-# --- Create Gradio Interface ---
+def handle_theme_toggle(theme_state, question, metric, image_types_to_show):
+    """Updates theme, regenerates plots, and returns new state to the UI."""
+    global current_theme
+    new_theme = "light" if theme_state == "dark" else "dark"
+    current_theme = new_theme
+    
+    plots = update_all_plots(question, metric, image_types_to_show)
+    new_button_text = "☀️" if new_theme == "light" else "🌙"
+    
+    return [new_theme] + list(plots) + [new_button_text]
+
+# --- GRADIO INTERFACE ---
 def create_gradio_interface():
-    """Create the Gradio interface with improved layout and styling."""
+    """Creates the Gradio UI with custom CSS and JS for theming."""
     question_options = ['All Combined'] + sorted(list(all_merged_long_dfs.keys()))
+
+    js_theme_handler = """
+    function(theme_state) {
+        const gradio_app = document.querySelector('gradio-app');
+        if (gradio_app) {
+            const root = gradio_app.shadowRoot || gradio_app;
+            if (theme_state === 'light') {
+                root.querySelector('.gradio-container').classList.add('light');
+            } else {
+                root.querySelector('.gradio-container').classList.remove('light');
+            }
+        }
+        return theme_state;
+    }
+    """
     
-    # Create custom theme
-    theme = gr.themes.Default(
-        primary_hue="blue",
-        secondary_hue="purple"
-    )
+    custom_css = """
+    :root {
+        --dark-bg: #000000; --dark-panel-bg: #16213E; --dark-input-bg: #1A1A2E; --dark-text: #FFFFFF; --dark-border: #00D4FF;
+        --light-bg: #FFFFFF; --light-panel-bg: #FFFFFF; --light-input-bg: #F8F9FA; --light-text: #2C3E50; --light-border: #DEE2E6;
+    }
+    /* Comprehensive fix for checkbox text visibility in Hugging Face environment */
+    .gradio-container .gr-checkbox-group label,
+    .gradio-container .gr-check-radio label,
+    .gradio-container .gr-checkbox-group label span,
+    .gradio-container .gr-check-radio span,
+    .gradio-container .gr-check label span {
+        color: var(--dark-text) !important;
+    }
     
-    with gr.Blocks(theme=theme, title="Eye-Tracking Analytics Dashboard") as demo:
-        # Header with custom HTML and CSS
+    .gradio-container.light .gr-checkbox-group label,
+    .gradio-container.light .gr-check-radio label,
+    .gradio-container.light .gr-checkbox-group label span,
+    .gradio-container.light .gr-check-radio span,
+    .gradio-container.light .gr-check label span {
+        color: var(--light-text) !important;
+    }
+    
+    /* Force higher specificity for checkboxes */
+    #component-0 .gr-checkbox-group label span,
+    #component-0 .gr-check label span {
+        color: var(--dark-text) !important;
+    }
+    
+    #component-0.light .gr-checkbox-group label span,
+    #component-0.light .gr-check label span {
+        color: var(--light-text) !important;
+    }
+    """
+
+    with gr.Blocks(css=custom_css, title="Eye-Tracking Analytics Dashboard") as demo:
+        theme_state = gr.Textbox("dark", visible=False)
+        
         gr.HTML("""
-        <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; text-align: center; margin-bottom: 20px;'>
+        <div style='background: linear-gradient(135deg, #00D4FF 0%, #FF6B6B 100%); padding: 30px; border-radius: 15px; text-align: center; margin-bottom: 20px;'>
             <h1 style='color: white; font-size: 2.0em; margin: 0; font-weight: 700; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);'>
                 🧠 Eye-Tracking Analytics Dashboard
             </h1>
@@ -392,37 +435,40 @@ def create_gradio_interface():
         """)
         
         with gr.Row():
-            question_select = gr.Dropdown(
-                choices=question_options, 
-                value=question_options[0] if question_options else "All Combined", 
-                label="📋 Select Question Set"
-            )
-            metric_select = gr.Dropdown(
-                choices=selected_metric_sheets, 
-                value=selected_metric_sheets[0] if selected_metric_sheets else "Tot Fixation dur", 
-                label="📊 Select Metric"
-            )
+            with gr.Column(scale=10):
+                with gr.Row():
+                    question_select = gr.Dropdown(choices=question_options, value=question_options[0], label="📋 Select Question Set")
+                    metric_select = gr.Dropdown(choices=selected_metric_sheets, value=selected_metric_sheets[0], label="📊 Select Metric")
+            with gr.Column(scale=1, min_width=80):
+                theme_toggle_btn = gr.Button("🌙", elem_classes="theme-btn")
         
         with gr.Accordion("📊 Interactive Bar Chart Analysis", open=True):
+            image_type_filter = gr.CheckboxGroup(choices=["Real", "AI"], value=["Real", "AI"], label="Filter by Image Type", interactive=True)
             bar_plot = gr.Plot(label="Bar Chart")
         
-        with gr.Accordion("🔍 Correlation Scatter Analysis", open=False):
+        with gr.Accordion("🔍 Correlation & Scatter Analysis", open=False):
             scatter_plot = gr.Plot(label="Scatter Plot")
-        
-        with gr.Accordion("📈 Multi-Dimensional Analysis & Heatmaps", open=False):
-            dashboard_plot = gr.Plot(label="Multi-Dimensional Dashboard")
             heatmap_plot = gr.Plot(label="Correlation Heatmap")
             
+        with gr.Accordion("📈 Multi-Dimensional Dashboard", open=False):
+            dashboard_plot = gr.Plot(label="Multi-Dimensional Dashboard")
+            
         # Wire up components
-        inputs = [question_select, metric_select]
+        inputs = [question_select, metric_select, image_type_filter]
         outputs = [dashboard_plot, heatmap_plot, bar_plot, scatter_plot]
         
-        # Event handlers
-        question_select.change(fn=update_dashboard, inputs=inputs, outputs=outputs)
-        metric_select.change(fn=update_dashboard, inputs=inputs, outputs=outputs)
+        for control in inputs:
+            control.change(fn=update_all_plots, inputs=inputs, outputs=outputs)
         
-        # Load initial data
-        demo.load(fn=update_dashboard, inputs=inputs, outputs=outputs)
+        theme_toggle_btn.click(
+            fn=handle_theme_toggle,
+            inputs=[theme_state] + inputs,
+            outputs=[theme_state] + outputs + [theme_toggle_btn]
+        )
+        
+        theme_state.change(js=js_theme_handler, inputs=[theme_state])
+        
+        demo.load(fn=update_all_plots, inputs=inputs, outputs=outputs)
         
     return demo
 
