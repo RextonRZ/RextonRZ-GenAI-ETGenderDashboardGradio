@@ -14,25 +14,15 @@ from functools import reduce
 from imblearn.over_sampling import SMOTE
 import re
 import traceback
-import base64
-from pathlib import Path
 
 warnings.filterwarnings('ignore')
 
 # --- Styling and Global Configuration ---
 MODERN_COLORS = {
-    'primary': '#4361EE', 
-    'secondary': '#F72585', 
-    'accent': '#4CC9F0', 
-    'dark': '#0F1A2C',
-    'light': '#F8F9FA', 
-    'success': '#06D6A0', 
-    'warning': '#FFD166', 
-    'text': '#FFFFFF',
-    'background': '#121C2D',
-    'panel': '#1A2332'
+    'primary': '#00D4FF', 'secondary': '#FF6B6B', 'accent': '#4ECDC4', 'dark': '#1A1A2E',
+    'light': '#16213E', 'success': '#00F5A0', 'warning': '#FFD93D', 'text': '#FFFFFF'
 }
-gender_palette = {'Male': MODERN_COLORS['accent'], 'Female': MODERN_COLORS['secondary']}
+gender_palette = {'Male': MODERN_COLORS['primary'], 'Female': MODERN_COLORS['secondary']}
 
 # --- DATA LOADING AND PROCESSING (Faithfully replicating the notebook) ---
 def load_and_process_data():
@@ -265,22 +255,17 @@ def _create_4_panel_dashboard(data, selected_metric, plot_title_suffix):
         ),
         cells=dict(
             values=[summary_stats[c] for c in summary_stats.columns],
-            fill_color=[MODERN_COLORS['panel']], font_color='white', align='center',
+            fill_color='rgba(40,40,60,0.8)', font_color='white', align='center',
             font=dict(size=11)
         )
     ), row=2, col=2)
 
     # Final Layout
     fig.update_layout(
-        height=850, 
-        plot_bgcolor=MODERN_COLORS['dark'], 
-        paper_bgcolor=MODERN_COLORS['dark'],
-        font_color='white', 
-        title_text=f'"{selected_metric}" - Analysis Dashboard {plot_title_suffix}',
-        title_x=0.5, 
-        title_font_size=20,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        margin=dict(l=20, r=20, t=100, b=30),
+        height=850, plot_bgcolor='#000', paper_bgcolor='#000',
+        font_color='white', title_text=f'"{selected_metric}" - Analysis Dashboard {plot_title_suffix}',
+        title_x=0.5, title_font_size=20,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
     fig.update_xaxes(title_text=selected_metric, row=2, col=1)
     fig.update_yaxes(title_text="Frequency", row=2, col=1)
@@ -310,14 +295,9 @@ def _create_correlation_heatmap(data, numeric_metrics, plot_title_suffix):
             ), row=1, col=col)
     
     fig.update_layout(
-        height=500, 
-        plot_bgcolor=MODERN_COLORS['dark'], 
-        paper_bgcolor=MODERN_COLORS['dark'],
-        font_color='white', 
-        title_text=f"Correlation Heatmaps by Gender {plot_title_suffix}",
-        title_x=0.5, 
-        title_font_size=20,
-        margin=dict(l=20, r=20, t=80, b=30),
+        height=500, plot_bgcolor='#000', paper_bgcolor='#000',
+        font_color='white', title_text=f"Correlation Heatmaps by Gender {plot_title_suffix}",
+        title_x=0.5, title_font_size=20
     )
     return fig
 
@@ -327,27 +307,8 @@ def create_modern_bar_plot(data, metric, agg_func, plot_title_suffix):
         return go.Figure().add_annotation(text="No data for bar plot", showarrow=False)
     
     aoi_gender_summary = data.groupby(['Gender', 'AOI', 'Image_Type'], as_index=False).agg({metric: agg_func}).sort_values(by=['AOI', 'Gender'])
-    fig = px.bar(aoi_gender_summary, x='AOI', y=metric, color='Gender', color_discrete_map=gender_palette, 
-                 title=f'{metric} ({agg_func.capitalize()}) per AOI {plot_title_suffix}',
-                 height=500, barmode='group')
-    
-    fig.update_layout(
-        plot_bgcolor=MODERN_COLORS['dark'], 
-        paper_bgcolor=MODERN_COLORS['dark'],
-        font_color='white', 
-        title_x=0.5, 
-        xaxis_tickangle=-45,
-        margin=dict(l=20, r=20, t=80, b=120),  # Increased bottom margin for rotated labels
-        xaxis=dict(tickfont=dict(size=10)),  # Smaller font for x-axis labels
-        legend=dict(
-            orientation="h", 
-            yanchor="bottom", 
-            y=1.02, 
-            xanchor="right", 
-            x=1,
-            bgcolor="rgba(0,0,0,0)"
-        )
-    )
+    fig = px.bar(aoi_gender_summary, x='AOI', y=metric, color='Gender', color_discrete_map=gender_palette, title=f'{metric} ({agg_func.capitalize()}) per AOI {plot_title_suffix}', height=500, barmode='group')
+    fig.update_layout(plot_bgcolor='#000', paper_bgcolor='#000', font_color='white', title_x=0.5, xaxis_tickangle=-45)
     return fig
 
 def create_combined_bar_plot(data, metric, agg_func, plot_title_suffix):
@@ -356,26 +317,8 @@ def create_combined_bar_plot(data, metric, agg_func, plot_title_suffix):
         return go.Figure().add_annotation(text="No data for bar plot", showarrow=False)
         
     summary = data.groupby(['Image_Type', 'Gender'], as_index=False).agg({metric: agg_func})
-    fig = px.bar(summary, x='Image_Type', y=metric, color='Gender', color_discrete_map=gender_palette, 
-                 title=f'{metric} ({agg_func.capitalize()}) by Image Type {plot_title_suffix}',
-                 height=500, barmode='group')
-    
-    fig.update_layout(
-        plot_bgcolor=MODERN_COLORS['dark'], 
-        paper_bgcolor=MODERN_COLORS['dark'],
-        font_color='white', 
-        title_x=0.5, 
-        xaxis_title='Image Type',
-        margin=dict(l=20, r=20, t=80, b=50),
-        legend=dict(
-            orientation="h", 
-            yanchor="bottom", 
-            y=1.02, 
-            xanchor="right", 
-            x=1,
-            bgcolor="rgba(0,0,0,0)"
-        )
-    )
+    fig = px.bar(summary, x='Image_Type', y=metric, color='Gender', color_discrete_map=gender_palette, title=f'{metric} ({agg_func.capitalize()}) by Image Type {plot_title_suffix}', height=500, barmode='group')
+    fig.update_layout(plot_bgcolor='#000', paper_bgcolor='#000', font_color='white', title_x=0.5, xaxis_title='Image Type')
     return fig
 
 def create_modern_scatter_plot(data, dur_col, count_col, plot_title_suffix):
@@ -386,21 +329,8 @@ def create_modern_scatter_plot(data, dur_col, count_col, plot_title_suffix):
     valid_data = data.dropna(subset=[dur_col, count_col])
     if valid_data.empty: return go.Figure().add_annotation(text="No valid data points", showarrow=False)
     
-    fig = px.scatter(valid_data, x=dur_col, y=count_col, color='Gender', symbol='Image_Type', 
-                     title=f'Interactive Scatter: {count_col} vs {dur_col} {plot_title_suffix}',
-                     hover_data=['Participant_ID', 'AOI'], color_discrete_map=gender_palette, height=600)
-    
-    fig.update_layout(
-        plot_bgcolor=MODERN_COLORS['dark'], 
-        paper_bgcolor=MODERN_COLORS['dark'],
-        font_color='white', 
-        title_x=0.5, 
-        legend=dict(bgcolor='rgba(0,0,0,0)'),
-        margin=dict(l=20, r=20, t=80, b=50),
-    )
-    fig.update_traces(
-        marker=dict(size=10, opacity=0.7, line=dict(width=1, color='white')),
-    )
+    fig = px.scatter(valid_data, x=dur_col, y=count_col, color='Gender', symbol='Image_Type', title=f'Interactive Scatter: {count_col} vs {dur_col} {plot_title_suffix}', hover_data=['Participant_ID', 'AOI'], color_discrete_map=gender_palette, height=600)
+    fig.update_layout(plot_bgcolor='#000', paper_bgcolor='#000', font_color='white', title_x=0.5, legend=dict(bgcolor='rgba(0,0,0,0)'))
     return fig
 
 # --- Load Data on Startup ---
@@ -408,7 +338,7 @@ print("Loading and processing data. This may take a moment...")
 all_merged_long_dfs, final_combined_long_df, selected_metric_sheets = load_and_process_data()
 
 # --- Main Dashboard Function ---
-def update_dashboard(question, metric, active_tab):
+def update_dashboard(question, metric):
     """Update all charts based on user selection and return a tuple of plots."""
     try:
         df_to_plot = final_combined_long_df if question == 'All Combined' else all_merged_long_dfs.get(question, pd.DataFrame())
@@ -416,343 +346,83 @@ def update_dashboard(question, metric, active_tab):
         if df_to_plot.empty:
             # Return empty plots if no data
             empty_fig = go.Figure().add_annotation(text="No data available", showarrow=False)
-            return empty_fig
-
+            return empty_fig, empty_fig, empty_fig, empty_fig
+        
         agg_func = 'mean' if 'Time to first Fixation' in metric else 'sum'
         plot_title_suffix = f"({question})"
         
-        # Create the requested plot based on active tab
-        if active_tab == "overview_tab":
-            if question != 'All Combined':
-                return create_modern_bar_plot(df_to_plot, metric, agg_func, plot_title_suffix)
-            else:
-                return create_combined_bar_plot(df_to_plot, metric, agg_func, plot_title_suffix)
-        elif active_tab == "scatter_tab":
-            return create_modern_scatter_plot(df_to_plot, 'Tot Fixation dur', 'Fixation count', plot_title_suffix)
-        elif active_tab == "dashboard_tab":
-            return _create_4_panel_dashboard(df_to_plot, metric, plot_title_suffix)
-        elif active_tab == "correlation_tab":
-            return _create_correlation_heatmap(df_to_plot, selected_metric_sheets, plot_title_suffix)
+        # Create plots
+        if question != 'All Combined':
+            bar_chart = create_modern_bar_plot(df_to_plot, metric, agg_func, plot_title_suffix)
+        else:
+            bar_chart = create_combined_bar_plot(df_to_plot, metric, agg_func, plot_title_suffix)
+            
+        scatter_chart = create_modern_scatter_plot(df_to_plot, 'Tot Fixation dur', 'Fixation count', plot_title_suffix)
+        dashboard_chart = _create_4_panel_dashboard(df_to_plot, metric, plot_title_suffix)
+        heatmap_chart = _create_correlation_heatmap(df_to_plot, selected_metric_sheets, plot_title_suffix)
         
+        return dashboard_chart, heatmap_chart, bar_chart, scatter_chart
     except Exception as e:
         print(f"Error in update_dashboard: {e}")
         empty_fig = go.Figure().add_annotation(text=f"Error: {str(e)}", showarrow=False)
-        return empty_fig
-
-# --- Create Custom CSS ---
-def get_custom_css():
-    return """
-    .container {
-        max-width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    
-    .gradio-container {
-        max-width: 100% !important;
-    }
-    
-    .tabs {
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        margin-bottom: 20px !important;
-    }
-    
-    .tab-nav {
-        background: rgba(20, 30, 50, 0.8);
-        backdrop-filter: blur(10px);
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-        padding: 0 !important;
-        display: flex;
-        flex-wrap: wrap;
-    }
-    
-    .tab-nav button {
-        background: transparent !important;
-        border: none !important;
-        border-radius: 0 !important;
-        color: #aab !important;
-        font-weight: 500 !important;
-        padding: 15px 20px !important;
-        margin: 0 !important;
-        transition: all 0.2s ease !important;
-        flex: 1;
-        text-align: center !important;
-    }
-    
-    .tab-nav button.selected {
-        color: white !important;
-        background: rgba(67, 97, 238, 0.3) !important;
-        border-bottom: 3px solid #4361EE !important;
-    }
-    
-    .tab-nav button:hover:not(.selected) {
-        background: rgba(255,255,255,0.05) !important;
-        color: white !important;
-    }
-    
-    .plot-container {
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        background: #1A2332;
-        padding: 10px;
-        transition: all 0.3s ease;
-    }
-    
-    .plot-container:hover {
-        box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-        transform: translateY(-2px);
-    }
-    
-    .header-content {
-        position: relative;
-        padding: 0;
-        overflow: hidden;
-        border-radius: 15px;
-    }
-    
-    .header-content::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(135deg, rgba(67, 97, 238, 0.9) 0%, rgba(29, 53, 87, 0.95) 100%);
-        z-index: 1;
-    }
-    
-    .header-content .content {
-        position: relative;
-        z-index: 2;
-        padding: 40px 30px;
-    }
-    
-    .control-panel {
-        background: #1A2332;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
-    }
-    
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .tab-nav button {
-            padding: 10px 15px !important;
-            font-size: 0.9rem !important;
-        }
-        
-        .header-content .content {
-            padding: 30px 20px;
-        }
-        
-        .header-content h1 {
-            font-size: 1.8rem !important;
-        }
-    }
-    
-    @media (max-width: 576px) {
-        .tab-nav button {
-            padding: 8px 10px !important;
-            font-size: 0.8rem !important;
-        }
-        
-        .header-content .content {
-            padding: 20px 15px;
-        }
-        
-        .header-content h1 {
-            font-size: 1.5rem !important;
-        }
-    }
-    """
-
-# --- Create Assets ---
-def get_svg_icons():
-    icons = {
-        "chart": """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 18v-7"/><path d="M12 18v-11"/><path d="M16 18v-5"/></svg>""",
-        
-        "scatter": """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="7.5" r="2"/><circle cx="16.5" cy="17.5" r="2"/><circle cx="7.5" cy="17.5" r="2"/><circle cx="16.5" cy="7.5" r="2"/></svg>""",
-        
-        "dashboard": """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>""",
-        
-        "heatmap": """<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M8 7h.01" /><path d="M12 7h.01" /><path d="M16 7h.01" /><path d="M8 12h.01" /><path d="M12 12h.01" /><path d="M16 12h.01" /><path d="M8 17h.01" /><path d="M12 17h.01" /><path d="M16 17h.01" /></svg>"""
-    }
-    return icons
+        return empty_fig, empty_fig, empty_fig, empty_fig
 
 # --- Create Gradio Interface ---
 def create_gradio_interface():
-    """Create the Gradio interface with improved modern layout and styling."""
+    """Create the Gradio interface with improved layout and styling."""
     question_options = ['All Combined'] + sorted(list(all_merged_long_dfs.keys()))
-    icons = get_svg_icons()
     
     # Create custom theme
-    theme = gr.themes.Monochrome(
-        primary_hue="indigo",
-        secondary_hue="purple",
-        neutral_hue="slate"
-    ).set(
-        body_text_color="white",
-        background_fill_primary="#0F1A2C",
-        background_fill_secondary="#1A2332",
-        border_color_primary="rgba(255,255,255,0.1)",
-        button_primary_background_fill="#4361EE",
-        button_primary_background_fill_hover="#3A51CD",
-        button_secondary_background_fill="#F72585",
-        button_secondary_background_fill_hover="#D61C75",
-        block_label_text_size="0.9rem",
-        block_title_text_size="1.5rem",
-        block_shadow="0 4px 15px rgba(0,0,0,0.15)",
-        button_shadow="0 2px 4px rgba(0,0,0,0.2)"
+    theme = gr.themes.Default(
+        primary_hue="blue",
+        secondary_hue="purple"
     )
-
-    # Add custom CSS
-    custom_css = get_custom_css()
     
-    with gr.Blocks(theme=theme, css=custom_css, title="Eye-Tracking Analytics Dashboard") as demo:
-        # Header with modern design and background
-        with gr.Column(elem_classes="header-content"):
-            with gr.Column(elem_classes="content"):
-                gr.HTML("""
-                <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                    <div style="margin-right: 15px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                    </div>
-                    <div>
-                        <h1 style="font-size: 2.2rem; font-weight: 700; margin: 0; color: white;">Eye-Tracking Analytics Dashboard</h1>
-                        <p style="font-size: 1.1rem; margin: 5px 0 0 0; opacity: 0.9; color: white;">
-                            Visual Attention Analysis: AI-Generated vs. Real Images
-                        </p>
-                    </div>
-                </div>
-                <div style="height: 1px; background: rgba(255,255,255,0.2); margin: 20px 0;"></div>
-                <div style="color: rgba(255,255,255,0.9); font-size: 0.95rem; line-height: 1.5;">
-                    This dashboard visualizes eye-tracking data to reveal how male and female participants visually process AI-generated 
-                    versus real images. Select a question set and metric to explore different aspects of visual attention patterns.
-                </div>
-                """)
+    with gr.Blocks(theme=theme, title="Eye-Tracking Analytics Dashboard") as demo:
+        # Header with custom HTML and CSS
+        gr.HTML("""
+        <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; text-align: center; margin-bottom: 20px;'>
+            <h1 style='color: white; font-size: 2.0em; margin: 0; font-weight: 700; text-shadow: 2px 2px 4px rgba(0,0,0,0.3);'>
+                🧠 Eye-Tracking Analytics Dashboard
+            </h1>
+            <p style='color: rgba(255,255,255,0.9); font-size: 1.2em; margin: 10px 0 0 0; font-weight: 300;'>
+                Visual Attention Differences Between AI-Generated and Real Images Based on Gender
+            </p>
+        </div>
+        """)
         
-        # Controls with nicer styling
-        with gr.Row(elem_classes="control-panel"):
-            with gr.Column(scale=1):
-                gr.HTML("""
-                <div style="display: flex; align-items: center; height: 100%;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/>
-                    </svg>
-                    <h3 style="margin: 0 0 0 10px;">Dashboard Controls</h3>
-                </div>
-                """)
-            with gr.Column(scale=2):
-                question_select = gr.Dropdown(
-                    choices=question_options, 
-                    value=question_options[0] if question_options else "All Combined", 
-                    label="Select Question Set",
-                    container=False
-                )
-            with gr.Column(scale=2):
-                metric_select = gr.Dropdown(
-                    choices=selected_metric_sheets, 
-                    value=selected_metric_sheets[0] if selected_metric_sheets else "Tot Fixation dur", 
-                    label="Select Metric",
-                    container=False
-                )
+        with gr.Row():
+            question_select = gr.Dropdown(
+                choices=question_options, 
+                value=question_options[0] if question_options else "All Combined", 
+                label="📋 Select Question Set"
+            )
+            metric_select = gr.Dropdown(
+                choices=selected_metric_sheets, 
+                value=selected_metric_sheets[0] if selected_metric_sheets else "Tot Fixation dur", 
+                label="📊 Select Metric"
+            )
         
-        # Modern tab-based interface instead of accordions
-        with gr.Column(elem_classes="tabs"):
-            active_tab = gr.State("overview_tab")
+        with gr.Accordion("📊 Interactive Bar Chart Analysis", open=True):
+            bar_plot = gr.Plot(label="Bar Chart")
+        
+        with gr.Accordion("🔍 Correlation Scatter Analysis", open=False):
+            scatter_plot = gr.Plot(label="Scatter Plot")
+        
+        with gr.Accordion("📈 Multi-Dimensional Analysis & Heatmaps", open=False):
+            dashboard_plot = gr.Plot(label="Multi-Dimensional Dashboard")
+            heatmap_plot = gr.Plot(label="Correlation Heatmap")
             
-            with gr.Row(elem_classes="tab-nav") as tab_nav:
-                overview_btn = gr.Button(f"{icons['chart']} Overview", elem_classes="tab-btn selected")
-                scatter_btn = gr.Button(f"{icons['scatter']} Scatter Analysis", elem_classes="tab-btn")
-                dashboard_btn = gr.Button(f"{icons['dashboard']} Multi-Dimensional Analysis", elem_classes="tab-btn")
-                correlation_btn = gr.Button(f"{icons['heatmap']} Correlation Heatmaps", elem_classes="tab-btn")
-            
-            # Tab content area
-            with gr.Column(elem_classes="plot-container"):
-                plot_output = gr.Plot(label="Visualization")
+        # Wire up components
+        inputs = [question_select, metric_select]
+        outputs = [dashboard_plot, heatmap_plot, bar_plot, scatter_plot]
         
-        # Event handlers for tabs
-        def update_tab(tab_name):
-            return tab_name
-
-        def update_btn_classes(active):
-            classes = {btn: "tab-btn" for btn in ["overview_tab", "scatter_tab", "dashboard_tab", "correlation_tab"]}
-            classes[active] = "tab-btn selected"
-            return classes["overview_tab"], classes["scatter_tab"], classes["dashboard_tab"], classes["correlation_tab"]
-
-        overview_btn.click(
-            fn=lambda: update_tab("overview_tab"),
-            outputs=active_tab
-        ).then(
-            fn=update_dashboard,
-            inputs=[question_select, metric_select, active_tab],
-            outputs=plot_output
-        ).then(
-            fn=lambda: ("tab-btn selected", "tab-btn", "tab-btn", "tab-btn"),
-            outputs=[overview_btn, scatter_btn, dashboard_btn, correlation_btn]
-        )
-        
-        scatter_btn.click(
-            fn=lambda: update_tab("scatter_tab"),
-            outputs=active_tab
-        ).then(
-            fn=update_dashboard,
-            inputs=[question_select, metric_select, active_tab],
-            outputs=plot_output
-        ).then(
-            fn=lambda: ("tab-btn", "tab-btn selected", "tab-btn", "tab-btn"),
-            outputs=[overview_btn, scatter_btn, dashboard_btn, correlation_btn]
-        )
-        
-        dashboard_btn.click(
-            fn=lambda: update_tab("dashboard_tab"),
-            outputs=active_tab
-        ).then(
-            fn=update_dashboard,
-            inputs=[question_select, metric_select, active_tab],
-            outputs=plot_output
-        ).then(
-            fn=lambda: ("tab-btn", "tab-btn", "tab-btn selected", "tab-btn"),
-            outputs=[overview_btn, scatter_btn, dashboard_btn, correlation_btn]
-        )
-        
-        correlation_btn.click(
-            fn=lambda: update_tab("correlation_tab"),
-            outputs=active_tab
-        ).then(
-            fn=update_dashboard,
-            inputs=[question_select, metric_select, active_tab],
-            outputs=plot_output
-        ).then(
-            fn=lambda: ("tab-btn", "tab-btn", "tab-btn", "tab-btn selected"),
-            outputs=[overview_btn, scatter_btn, dashboard_btn, correlation_btn]
-        )
-        
-        # Update handlers for dropdown changes
-        question_select.change(
-            fn=update_dashboard,
-            inputs=[question_select, metric_select, active_tab],
-            outputs=plot_output
-        )
-        
-        metric_select.change(
-            fn=update_dashboard,
-            inputs=[question_select, metric_select, active_tab],
-            outputs=plot_output
-        )
+        # Event handlers
+        question_select.change(fn=update_dashboard, inputs=inputs, outputs=outputs)
+        metric_select.change(fn=update_dashboard, inputs=inputs, outputs=outputs)
         
         # Load initial data
-        demo.load(
-            fn=lambda: update_dashboard('All Combined', selected_metric_sheets[0], "overview_tab"),
-            outputs=plot_output
-        )
+        demo.load(fn=update_dashboard, inputs=inputs, outputs=outputs)
         
     return demo
 
