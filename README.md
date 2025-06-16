@@ -126,12 +126,12 @@ MIT License – feel free to reuse and build upon this work with attribution.
 ---
 ## 👥 Contributors
 
-- Rui Zhe Ooi  
-- Shin Yen Lee  
-- Rui Zhe Khor  
+- Ooi Rui Zhe   
+- Lee Shin Yen  
+- Khor Rui Zhe  
 - Iman Soffea  
-- Min Zi Teoh  
-- Jia Xin Low  
+- Teoh Min Zi  
+- Low Jia Xin  
 (Supervised by Dr. Unaizah Hanum)
 
 ---
