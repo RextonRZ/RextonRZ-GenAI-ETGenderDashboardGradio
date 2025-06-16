@@ -590,38 +590,23 @@ def create_gradio_interface():
     icons = get_svg_icons()
     
     # Create custom theme
-    theme = gr.themes.Base(
-        primary_hue=gr.themes.Color(
-            c50="#EBEFFE", c100="#D2D9FD", c200="#A6B6FB", c300="#7992F9", 
-            c400="#4D70F7", c500="#4361EE", c600="#2D4BCA", c700="#1D37A6", 
-            c800="#132882", c900="#0A1A5E"
-        ),
-        secondary_hue=gr.themes.Color(
-            c50="#FEE8F2", c100="#FED0E5", c200="#FBA3CB", c300="#F876B2", 
-            c400="#F54A98", c500="#F72585", c600="#D6156E", c700="#B60958", 
-            c800="#940442", c900="#72012C"
-        ),
-        neutral_hue=gr.themes.Color(
-            c50="#F8F9FC", c100="#F0F2F8", c200="#E2E6F0", c300="#D3D9E9", 
-            c400="#C5CDE1", c500="#B7C1DA", c600="#98A5C0", c700="#7989A5", 
-            c800="#5B6C8B", c900="#3D4E71"
-        ),
-        spacing_size=gr.themes.Size(
-            xs=4, sm=8, md=16, lg=24, xl=32
-        ),
-        radius_size=gr.themes.Size(
-            xs=3, sm=6, md=9, lg=12, xl=24
-        ),
-        shadow_size=gr.themes.Size(
-            xs="0 1px 3px rgba(0,0,0,0.1)", 
-            sm="0 2px 6px rgba(0,0,0,0.15)", 
-            md="0 4px 12px rgba(0,0,0,0.15)", 
-            lg="0 10px 25px rgba(0,0,0,0.15)", 
-            xl="0 15px 50px rgba(0,0,0,0.15)"
-        ),
-        text_size=gr.themes.Size(
-            xs=12, sm=14, md=16, lg=20, xl=24
-        ),
+    theme = gr.themes.Monochrome(
+        primary_hue="indigo",
+        secondary_hue="purple",
+        neutral_hue="slate"
+    ).set(
+        body_text_color="white",
+        background_fill_primary="#0F1A2C",
+        background_fill_secondary="#1A2332",
+        border_color_primary="rgba(255,255,255,0.1)",
+        button_primary_background_fill="#4361EE",
+        button_primary_background_fill_hover="#3A51CD",
+        button_secondary_background_fill="#F72585",
+        button_secondary_background_fill_hover="#D61C75",
+        block_label_text_size="0.9rem",
+        block_title_text_size="1.5rem",
+        block_shadow="0 4px 15px rgba(0,0,0,0.15)",
+        button_shadow="0 2px 4px rgba(0,0,0,0.2)"
     )
 
     # Add custom CSS
