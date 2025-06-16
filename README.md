@@ -1,15 +1,3 @@
----
-title: GenAI-ETGenderDashboard
-emoji: 👁️
-colorFrom: blue
-colorTo: purple
-sdk: gradio
-sdk_version: 4.44.0
-app_file: app.py
-pinned: false
-license: mit
----
-
 # 👁️ GenAI-ETGenderDashboardGradio
 
 An interactive Gradio dashboard for analyzing **eye-tracking metrics** with a focus on **gender-based differences in visual attention** while distinguishing between **AI-generated** and **real images**.
