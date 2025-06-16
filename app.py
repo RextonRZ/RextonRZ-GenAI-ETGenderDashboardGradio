@@ -36,7 +36,7 @@ def load_and_process_data():
         if not os.path.exists(base_path):
             print(f"Warning: Data directory {base_path} not found. Creating sample data.")
             return create_sample_data()
-        
+
         # Load participant data
         participant_file = os.path.join(base_path, 'ParticipantList.xlsx')
         if not os.path.exists(participant_file):
@@ -362,7 +362,7 @@ def create_gradio_interface():
     """Create the Gradio interface with improved layout and styling."""
     question_options = ['All Combined'] + sorted(list(all_merged_long_dfs.keys()))
     
-    with gr.Blocks(theme=gr.themes.Slate(), title="Eye-Tracking Analytics Dashboard") as demo:
+    with gr.Blocks(theme=gr.themes.Default(primary_hue="blue", secondary_hue="purple").dark(), title="Eye-Tracking Analytics Dashboard") as demo:
         # Header with custom HTML and CSS
         gr.HTML(f"""
         <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 15px; text-align: center;'>
